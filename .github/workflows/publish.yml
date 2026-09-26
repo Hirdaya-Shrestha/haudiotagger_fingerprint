@@ -415,6 +415,14 @@ jobs:
             --no-typescript \
             --target no-modules
 
+          # Rename the glue's top-level global to match `wasm_bindgen_name`
+          # in flutter_rust_bridge.yaml. The default (`wasm_bindgen`)
+          # collides when two FRB plugins load on one page: the second
+          # classic script re-declares the `let`, so one plugin ends up
+          # talking to the other's wasm (content-hash mismatch at runtime).
+          sed -i '1s/^let wasm_bindgen =/let wasm_bindgen_haudiotagger_fingerprint =/' \
+            rust/pkg/haudiotagger_fingerprint.js
+
       - name: Stage WASM files
         run: |
           mkdir -p pkg

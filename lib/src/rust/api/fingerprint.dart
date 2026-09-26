@@ -5,7 +5,6 @@
 
 import '../frb_generated.dart';
 import 'error.dart';
-
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `decode_to_pcm`, `fingerprint_pcm`
@@ -28,10 +27,8 @@ Future<AudioFingerprint> fingerprintFromBytes({required List<int> bytes}) =>
 /// `1.0` means (near-)identical audio. Copies and renames score `1.0`;
 /// different encodings of the same recording typically score above `0.8`;
 /// unrelated audio scores near `0.0`.
-Future<double> similarity({
-  required AudioFingerprint a,
-  required AudioFingerprint b,
-}) =>
+Future<double> similarity(
+        {required AudioFingerprint a, required AudioFingerprint b}) =>
     RustLib.instance.api.crateApiFingerprintSimilarity(a: a, b: b);
 
 /// A perceptual audio fingerprint.
@@ -46,7 +43,10 @@ class AudioFingerprint {
   /// Decoded audio duration in whole seconds.
   final int durationSecs;
 
-  const AudioFingerprint({required this.values, required this.durationSecs});
+  const AudioFingerprint({
+    required this.values,
+    required this.durationSecs,
+  });
 
   @override
   int get hashCode => values.hashCode ^ durationSecs.hashCode;

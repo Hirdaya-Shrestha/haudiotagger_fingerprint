@@ -2,3 +2,10 @@ rust_input: crate::api
 rust_root: rust/
 dart_output: lib/src/rust
 default_external_library_loader_web_prefix: assets/packages/haudiotagger_fingerprint/pkg/
+# Unique JS global for the wasm-bindgen glue. The default (`wasm_bindgen`)
+# collides when two FRB plugins load on one web page: the second classic
+# script re-declares the top-level `let`, so one plugin ends up talking to
+# the other's wasm (content-hash mismatch). This MUST stay in sync with the
+# `let` binding at the top of pkg/haudiotagger_fingerprint.js (renamed by
+# the publish workflow after wasm-bindgen runs).
+wasm_bindgen_name: wasm_bindgen_haudiotagger_fingerprint

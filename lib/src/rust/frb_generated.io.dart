@@ -5,13 +5,10 @@
 
 import 'api/error.dart';
 import 'api/fingerprint.dart';
-
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' as ffi;
-
 import 'frb_generated.dart';
-
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
 
 abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
@@ -60,8 +57,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   AudioFingerprint sse_decode_box_autoadd_audio_fingerprint(
-    SseDeserializer deserializer,
-  );
+      SseDeserializer deserializer);
 
   @protected
   double sse_decode_f_64(SseDeserializer deserializer);
@@ -95,39 +91,29 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_audio_fingerprint(
-    AudioFingerprint self,
-    SseSerializer serializer,
-  );
+      AudioFingerprint self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_audio_fingerprint(
-    AudioFingerprint self,
-    SseSerializer serializer,
-  );
+      AudioFingerprint self, SseSerializer serializer);
 
   @protected
   void sse_encode_f_64(double self, SseSerializer serializer);
 
   @protected
   void sse_encode_fingerprint_error(
-    FingerprintError self,
-    SseSerializer serializer,
-  );
+      FingerprintError self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_prim_u_32_strict(
-    Uint32List self,
-    SseSerializer serializer,
-  );
+      Uint32List self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_prim_u_8_strict(
-    Uint8List self,
-    SseSerializer serializer,
-  );
+      Uint8List self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_32(int self, SseSerializer serializer);

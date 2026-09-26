@@ -1,3 +1,9 @@
+## 0.1.2
+
+### Bug Fixes
+
+- Fixed web content-hash mismatch when used alongside `haudiotagger`: both plugins' wasm-bindgen glue declared the same top-level `wasm_bindgen` global, so one plugin talked to the other's wasm. This package now uses a unique `wasm_bindgen_haudiotagger_fingerprint` global (`wasm_bindgen_name` + renamed glue; publish workflow applies the rename on every build)
+
 ## 0.1.1
 
 ### Bug Fixes

@@ -4,7 +4,6 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
-
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'error.freezed.dart';
@@ -16,18 +15,22 @@ sealed class FingerprintError with _$FingerprintError implements FrbException {
   const FingerprintError._();
 
   /// The file could not be opened or read.
-  const factory FingerprintError.openFile({required String message}) =
-      FingerprintError_OpenFile;
+  const factory FingerprintError.openFile({
+    required String message,
+  }) = FingerprintError_OpenFile;
 
   /// The audio could not be decoded (unsupported or corrupt).
-  const factory FingerprintError.decode({required String message}) =
-      FingerprintError_Decode;
+  const factory FingerprintError.decode({
+    required String message,
+  }) = FingerprintError_Decode;
 
   /// The container or codec has no decoder in this build.
-  const factory FingerprintError.unsupported({required String message}) =
-      FingerprintError_Unsupported;
+  const factory FingerprintError.unsupported({
+    required String message,
+  }) = FingerprintError_Unsupported;
 
   /// Fingerprint calculation or comparison failed.
-  const factory FingerprintError.fingerprint({required String message}) =
-      FingerprintError_Fingerprint;
+  const factory FingerprintError.fingerprint({
+    required String message,
+  }) = FingerprintError_Fingerprint;
 }
