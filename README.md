@@ -1,47 +1,104 @@
-# haudiotagger_fingerprint
-
 <p align="center">
   <img src="logo.png" alt="haudiotagger_fingerprint" width="140">
 </p>
 
-Perceptual audio fingerprinting for Flutter. Identify and compare recordings
-by **content** — duplicate detection, library cleanup, song matching — powered
-by Rust ([Symphonia](https://github.com/pdeljanov/Symphonia) decoding +
-[Chromaprint](https://acoustid.org/chromaprint) fingerprinting, 100% pure Rust,
-no C dependencies).
+<h1 align="center">haudiotagger_fingerprint</h1>
 
-Sibling of [`haudiotagger`](https://github.com/Hirdaya-Shrestha/haudiotagger):
+<p align="center">
+  <strong>Perceptual audio fingerprinting for Flutter.</strong>
+</p>
+
+<p align="center">
+  Duplicates · Renames · Re-encodes — matched by content, not filenames
+</p>
+
+<p align="center">
+  <a href="https://pub.dev/packages/haudiotagger_fingerprint"><img src="https://img.shields.io/pub/v/haudiotagger_fingerprint.svg?label=pub.dev&color=0175C2" alt="pub.dev"></a>
+  <a href="https://github.com/Hirdaya-Shrestha/haudiotagger_fingerprint/actions"><img src="https://github.com/Hirdaya-Shrestha/haudiotagger_fingerprint/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-4285F4.svg" alt="MIT License"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/Hirdaya-Shrestha/haudiotagger_fingerprint"><strong>GitHub</strong></a>
+  ·
+  <a href="https://pub.dev/packages/haudiotagger_fingerprint"><strong>pub.dev</strong></a>
+</p>
+
+---
+
+## Why haudiotagger_fingerprint?
+
+Filenames lie and tags go missing — but the audio doesn't. This package
+fingerprints **what a recording sounds like**, so this:
+
+```text
+Song A.mp3
+song_copy.mp3
+01 - Song A.mp3
+Song A (Remastered).mp3
+```
+
+can be compared by content instead of by name.
+
+It is the sibling of [`haudiotagger`](https://github.com/Hirdaya-Shrestha/haudiotagger):
 haudiotagger reads metadata, this package fingerprints audio. Use them together
 or separately — they are independent packages with no shared native symbols.
 
+### Highlights
+
+- 🧬 Chromaprint-compatible perceptual fingerprints (same algorithm as fpcalc/AcoustID)
+- 🎵 MP3, FLAC, Ogg Vorbis, WAV, AIFF, M4A/AAC/ALAC
+- 🌍 Android, iOS, Linux, macOS, Windows & Web
+- 🦀 100% pure Rust — no C dependencies, builds everywhere including WASM
+- 📦 Separate lightweight package — zero cost unless you depend on it
+
+---
+
 ## Installation
+
+Add haudiotagger_fingerprint to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
   haudiotagger_fingerprint: ^0.1.0
 ```
 
+Or install it from the command line:
+
 ```bash
 flutter pub add haudiotagger_fingerprint
 ```
 
-## Usage
+---
+
+## Quick Start
+
+### Fingerprint a file
 
 ```dart
 import 'package:haudiotagger_fingerprint/haudiotagger_fingerprint.dart';
 
-// Fingerprint a file (decodes the full stream; tags and filenames ignored).
+// Decodes the full stream; tags, filenames, and containers are ignored.
 final a = await HaudioFingerprint.fingerprint('Song A.mp3');
 final b = await HaudioFingerprint.fingerprint('song_copy.mp3');
 
-// Compare: 1.0 is (near-)identical, 0.0 is unrelated.
+print(a.durationSecs);
+```
+
+### Compare two fingerprints
+
+```dart
+// 1.0 is (near-)identical audio, 0.0 is unrelated.
 final score = await HaudioFingerprint.similarity(a, b);
 print(score); // 1.0
 
 // Or as a method:
 print(await a.similarityTo(b));
+```
 
-// Web / in-memory bytes:
+### Fingerprint bytes (Web)
+
+```dart
 final fp = await HaudioFingerprint.fingerprintFromBytes(bytes);
 ```
 
@@ -51,12 +108,14 @@ final fp = await HaudioFingerprint.fingerprintFromBytes(bytes);
 import 'package:haudiotagger/haudiotagger.dart';
 import 'package:haudiotagger_fingerprint/haudiotagger_fingerprint.dart';
 
-final tag = await Haudiotagger.read(path);       // metadata for display
+final tag = await Haudiotagger.read(path);            // metadata for display
 final fp = await HaudioFingerprint.fingerprint(path); // content for matching
 ```
 
-Group files with `similarity >= 0.8` as the same recording; use the tag
+Group files with `similarity >= 0.8` as the same recording, then use the tag
 (title/artist/duration) to pick which copy to keep.
+
+---
 
 ## Score interpretation
 
@@ -66,17 +125,21 @@ Group files with `similarity >= 0.8` as the same recording; use the tag
 | `> 0.8` | Same recording, different encode/container |
 | `~0.0` | Unrelated audio |
 
+---
+
 ## Supported formats (decoding)
 
 | Format | Fingerprint |
 |:------:|:-----------:|
-| MP3 | ✅ |
-| FLAC | ✅ |
-| Ogg Vorbis | ✅ |
-| WAV | ✅ |
-| AIFF | ✅ |
-| M4A / AAC / ALAC | ✅ |
-| Opus, APE, WavPack, Musepack | ❌ (no pure-Rust decoder) |
+| **MP3** | ✅ |
+| **FLAC** | ✅ |
+| **Ogg Vorbis** | ✅ |
+| **WAV** | ✅ |
+| **AIFF** | ✅ |
+| **M4A / AAC / ALAC** | ✅ |
+| **Opus, APE, WavPack, Musepack** | ❌ (no pure-Rust decoder) |
+
+---
 
 ## Platform support
 
@@ -87,10 +150,13 @@ Group files with `similarity >= 0.8` as the same recording; use the tag
 | Linux | ✅ |
 | macOS | ✅ |
 | Windows | ✅ |
-| Web (WASM) | ✅ |
+| Web | ✅ |
 
-Web decodes and fingerprints fully in-browser. Large files are CPU-heavy;
-prefer short clips or native for bulk library scans.
+The Web implementation decodes and fingerprints fully in-browser via
+WebAssembly. Large files are CPU-heavy; prefer short clips or native
+for bulk library scans.
+
+---
 
 ## Compatibility with haudiotagger
 
@@ -105,11 +171,35 @@ prefer short clips or native for bulk library scans.
   Dynamic linking (FRB v2's `DynamicLibrary.open` path) avoids it. This
   affects any pair of FRB plugins, not just these two.
 
+---
+
 ## Requirements
 
 - Flutter `>= 3.0.0`
 - Dart SDK `>= 3.6.0`
 
+---
+
+## Contributing
+
+Contributions are welcome! 🎉
+
+If you find a bug, have an idea, or want to improve haudiotagger_fingerprint:
+
+- ⭐ [Star the repository](https://github.com/Hirdaya-Shrestha/haudiotagger_fingerprint)
+- 🐛 [Report a bug](https://github.com/Hirdaya-Shrestha/haudiotagger_fingerprint/issues)
+- 💡 [Request a feature](https://github.com/Hirdaya-Shrestha/haudiotagger_fingerprint/issues)
+- 🤝 Submit a pull request
+
+---
+
 ## License
 
-MIT — see [LICENSE](LICENSE).
+haudiotagger_fingerprint is open-source software licensed under the [MIT License](LICENSE).
+
+---
+
+<p align="center">
+  Made with ❤️ and 🦀 by
+  <a href="https://hirdaya-shrestha.com.np">Hirdaya Shrestha</a>
+</p>
