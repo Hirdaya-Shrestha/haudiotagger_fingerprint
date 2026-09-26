@@ -1,5 +1,6 @@
 use std::io::Cursor;
 
+use flutter_rust_bridge::frb;
 use rusty_chromaprint::{Configuration, Fingerprinter, match_fingerprints};
 use symphonia::core::codecs::audio::AudioDecoderOptions;
 use symphonia::core::errors::Error as SymphoniaError;
@@ -29,6 +30,12 @@ pub struct AudioFingerprint {
 /// Decodes the full audio stream (MP3, FLAC, Ogg Vorbis, WAV, AIFF,
 /// M4A/AAC/ALAC) and fingerprints the PCM content. Tags, filenames, and
 /// container differences do not affect the result.
+///
+/// `sync` (not pooled): FRB would otherwise run this on its web worker pool,
+/// whose bootstrap hardcodes the `wasm_bindgen` JS global — unusable when
+/// two FRB plugins share a page. Sync execution needs no pool, no workers.
+// ponytail: sync keeps web worker-free; revisit if compute ever needs threads.
+#[frb(sync)]
 pub fn fingerprint(path: String) -> Result<AudioFingerprint, FingerprintError> {
     let bytes = std::fs::read(&path).map_err(|e| FingerprintError::OpenFile {
         message: format!("Could not read file: {e}"),
@@ -37,6 +44,8 @@ pub fn fingerprint(path: String) -> Result<AudioFingerprint, FingerprintError> {
 }
 
 /// Compute the fingerprint of in-memory audio `bytes` (for web/WASM).
+// ponytail: sync, same worker-pool reason as `fingerprint`.
+#[frb(sync)]
 pub fn fingerprint_from_bytes(bytes: Vec<u8>) -> Result<AudioFingerprint, FingerprintError> {
     let (samples, sample_rate, channels) = decode_to_pcm(&bytes)?;
     let (values, duration_secs) = fingerprint_pcm(&samples, sample_rate, channels)?;
@@ -51,6 +60,8 @@ pub fn fingerprint_from_bytes(bytes: Vec<u8>) -> Result<AudioFingerprint, Finger
 /// `1.0` means (near-)identical audio. Copies and renames score `1.0`;
 /// different encodings of the same recording typically score above `0.8`;
 /// unrelated audio scores near `0.0`.
+// ponytail: sync, same worker-pool reason as `fingerprint`.
+#[frb(sync)]
 pub fn similarity(a: AudioFingerprint, b: AudioFingerprint) -> Result<f64, FingerprintError> {
     if a.values.is_empty() || b.values.is_empty() {
         return Err(FingerprintError::Fingerprint {

@@ -15,11 +15,15 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 /// Decodes the full audio stream (MP3, FLAC, Ogg Vorbis, WAV, AIFF,
 /// M4A/AAC/ALAC) and fingerprints the PCM content. Tags, filenames, and
 /// container differences do not affect the result.
-Future<AudioFingerprint> fingerprint({required String path}) =>
+///
+/// `sync` (not pooled): FRB would otherwise run this on its web worker pool,
+/// whose bootstrap hardcodes the `wasm_bindgen` JS global — unusable when
+/// two FRB plugins share a page. Sync execution needs no pool, no workers.
+AudioFingerprint fingerprint({required String path}) =>
     RustLib.instance.api.crateApiFingerprintFingerprint(path: path);
 
 /// Compute the fingerprint of in-memory audio `bytes` (for web/WASM).
-Future<AudioFingerprint> fingerprintFromBytes({required List<int> bytes}) =>
+AudioFingerprint fingerprintFromBytes({required List<int> bytes}) =>
     RustLib.instance.api.crateApiFingerprintFingerprintFromBytes(bytes: bytes);
 
 /// Compare two fingerprints, returning a similarity score from `0.0` to `1.0`.
@@ -27,8 +31,7 @@ Future<AudioFingerprint> fingerprintFromBytes({required List<int> bytes}) =>
 /// `1.0` means (near-)identical audio. Copies and renames score `1.0`;
 /// different encodings of the same recording typically score above `0.8`;
 /// unrelated audio scores near `0.0`.
-Future<double> similarity(
-        {required AudioFingerprint a, required AudioFingerprint b}) =>
+double similarity({required AudioFingerprint a, required AudioFingerprint b}) =>
     RustLib.instance.api.crateApiFingerprintSimilarity(a: a, b: b);
 
 /// A perceptual audio fingerprint.

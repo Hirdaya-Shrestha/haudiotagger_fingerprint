@@ -1,3 +1,9 @@
+## 0.1.3
+
+### Bug Fixes
+
+- Fixed web `DataCloneError` when used alongside `haudiotagger`: plain functions ran on FRB's worker pool, whose bootstrap hardcodes the `wasm_bindgen` JS global. All three API functions are now `#[frb(sync)]` — they execute on the calling thread with no pool, no workers, and no shared-memory hand-off. Public Dart API unchanged (still `Future`-based)
+
 ## 0.1.2
 
 ### Bug Fixes

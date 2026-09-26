@@ -81,13 +81,12 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 }
 
 abstract class RustLibApi extends BaseApi {
-  Future<AudioFingerprint> crateApiFingerprintFingerprint(
-      {required String path});
+  AudioFingerprint crateApiFingerprintFingerprint({required String path});
 
-  Future<AudioFingerprint> crateApiFingerprintFingerprintFromBytes(
+  AudioFingerprint crateApiFingerprintFingerprintFromBytes(
       {required List<int> bytes});
 
-  Future<double> crateApiFingerprintSimilarity(
+  double crateApiFingerprintSimilarity(
       {required AudioFingerprint a, required AudioFingerprint b});
 }
 
@@ -100,14 +99,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   });
 
   @override
-  Future<AudioFingerprint> crateApiFingerprintFingerprint(
-      {required String path}) {
-    return handler.executeNormal(NormalTask(
-      callFfi: (port_) {
+  AudioFingerprint crateApiFingerprintFingerprint({required String path}) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(path, serializer);
-        pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 1, port: port_);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 1)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_audio_fingerprint,
@@ -126,14 +123,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<AudioFingerprint> crateApiFingerprintFingerprintFromBytes(
+  AudioFingerprint crateApiFingerprintFingerprintFromBytes(
       {required List<int> bytes}) {
-    return handler.executeNormal(NormalTask(
-      callFfi: (port_) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_list_prim_u_8_loose(bytes, serializer);
-        pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 2, port: port_);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 2)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_audio_fingerprint,
@@ -152,15 +148,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<double> crateApiFingerprintSimilarity(
+  double crateApiFingerprintSimilarity(
       {required AudioFingerprint a, required AudioFingerprint b}) {
-    return handler.executeNormal(NormalTask(
-      callFfi: (port_) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_box_autoadd_audio_fingerprint(a, serializer);
         sse_encode_box_autoadd_audio_fingerprint(b, serializer);
-        pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 3, port: port_);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 3)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_f_64,
