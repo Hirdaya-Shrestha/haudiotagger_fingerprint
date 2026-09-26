@@ -7,6 +7,7 @@
 - New `HaudioFingerprint.similarity(a, b)` (plus `similarityTo`) returning a `0.0`–`1.0` content-match score
 - Chromaprint-compatible fingerprints (`preset_test2`, same algorithm as fpcalc/AcoustID)
 - Pure-Rust stack (Symphonia + rusty-chromaprint): no C dependencies, builds on all platforms including WASM
+- Standalone by design: zero dependency on `haudiotagger` either way, yet composes with it conflict-free (proven by `test/addon_test.dart`, which uses `haudiotagger` as a dev-only dependency)
 
 ### Dependencies
 

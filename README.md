@@ -104,6 +104,9 @@ final fp = await HaudioFingerprint.fingerprintFromBytes(bytes);
 
 ### Duplicate detection with haudiotagger
 
+The two packages are independent — install either, both, or neither together —
+and compose with two imports, zero conflicts:
+
 ```dart
 import 'package:haudiotagger/haudiotagger.dart';
 import 'package:haudiotagger_fingerprint/haudiotagger_fingerprint.dart';
