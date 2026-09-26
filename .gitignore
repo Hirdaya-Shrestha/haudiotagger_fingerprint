@@ -6,6 +6,7 @@ pubspec.lock
 target/
 .fvm/
 .mason/
+!cli/commands/build/
 
 # Native binaries (downloaded from GitHub releases at build time)
 linux/libhaudiotagger_fingerprint.so

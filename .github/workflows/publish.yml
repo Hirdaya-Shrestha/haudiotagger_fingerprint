@@ -118,9 +118,11 @@ jobs:
         run: flutter pub get
 
       - name: Build iOS xcframework
+        working-directory: cli
         run: dart run cli build ios -v
 
       - name: Build macOS xcframework
+        working-directory: cli
         run: dart run cli build macos -v
 
       - name: Verify frameworks
@@ -341,6 +343,7 @@ jobs:
           sudo apt-get install -y musl-tools
 
       - name: Build
+        working-directory: cli
         run: dart run cli build ${{ matrix.target }} -v
 
       - name: Upload native artifacts

@@ -27,9 +27,11 @@ jobs:
       - run: cd cli && flutter pub get
 
       - name: Build iOS xcframework
+        working-directory: cli
         run: dart run cli build ios -v
 
       - name: Build macOS xcframework
+        working-directory: cli
         run: dart run cli build macos -v
 
   rust_lint:
@@ -125,6 +127,7 @@ jobs:
         if: matrix.target == 'linux'
         run: sudo apt-get update && sudo apt-get install -y musl-tools
       - name: Build
+        working-directory: cli
         run: dart run cli build ${{ matrix.target }} -v
       - name: Test
         if: matrix.target == 'linux'
