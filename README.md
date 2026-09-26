@@ -98,6 +98,22 @@ print(await a.similarityTo(b));
 final fp = await HaudioFingerprint.fingerprintFromBytes(bytes);
 ```
 
+### Unified API with haudiotagger
+
+With both packages installed, fingerprinting is also available through
+`Haudiotagger` — no extra imports or init calls. This package
+self-registers as the backend at app startup:
+
+```dart
+import 'package:haudiotagger/haudiotagger.dart';
+
+final fp = await Haudiotagger.fingerprint('Song A.mp3');
+final score = await Haudiotagger.similarity(a, b);
+```
+
+Without this package installed, those calls throw a `StateError` telling
+you to add it. Requires `haudiotagger ^2.2.0`.
+
 ### Finding duplicates
 
 Group files with `similarity >= 0.8` as the same recording, then use each

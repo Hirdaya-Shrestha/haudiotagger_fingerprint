@@ -21,6 +21,7 @@ dependencies:
   ffi: ^2.2.0
   flutter_rust_bridge: ^2.13.0
   freezed_annotation: ^3.1.0
+  haudiotagger_interface: ^0.1.0
   rust_lib_haudiotagger_fingerprint:
     path: rust_builder
 
@@ -39,16 +40,22 @@ flutter:
       android:
         package: com.ha.nep.haudiotagger_fingerprint
         pluginClass: HaudioFingerprintPlugin
+        dartPluginClass: HaudioFingerprintBackend
       ios:
         pluginClass: HaudioFingerprintPlugin
+        dartPluginClass: HaudioFingerprintBackend
       linux:
         pluginClass: HaudioFingerprintPlugin
+        dartPluginClass: HaudioFingerprintBackend
       macos:
         pluginClass: HaudioFingerprintPlugin
+        dartPluginClass: HaudioFingerprintBackend
       windows:
         pluginClass: HaudioFingerprintPluginCApi
+        dartPluginClass: HaudioFingerprintBackend
       web:
         pluginClass: HaudioFingerprintWeb
+        dartPluginClass: HaudioFingerprintBackend
         fileName: haudiotagger_fingerprint_web.dart
   assets:
     - pkg/haudiotagger_fingerprint_bg.wasm
