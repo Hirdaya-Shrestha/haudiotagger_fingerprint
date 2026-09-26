@@ -1,6 +1,6 @@
 name: rust_lib_haudiotagger_fingerprint
 description: "Rust native library builder for haudiotagger_fingerprint — compiles lofty-based audio metadata reader/writer for Flutter."
-version: 0.1.1
+version: 0.1.2
 homepage: https://github.com/Hirdaya-Shrestha/haudiotagger_fingerprint
 repository: https://github.com/Hirdaya-Shrestha/haudiotagger_fingerprint
 documentation: https://github.com/Hirdaya-Shrestha/haudiotagger_fingerprint/wiki
