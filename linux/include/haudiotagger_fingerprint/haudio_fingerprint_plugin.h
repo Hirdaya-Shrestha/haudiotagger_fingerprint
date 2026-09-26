@@ -1,5 +1,5 @@
-#ifndef FLUTTER_PLUGIN_HAUDIOTAGGER_PLUGIN_H_
-#define FLUTTER_PLUGIN_HAUDIOTAGGER_PLUGIN_H_
+#ifndef FLUTTER_PLUGIN_HAUDIO_FINGERPRINT_PLUGIN_H_
+#define FLUTTER_PLUGIN_HAUDIO_FINGERPRINT_PLUGIN_H_
 
 #include <flutter_linux/flutter_linux.h>
 
@@ -18,9 +18,11 @@ typedef struct {
 
 FLUTTER_PLUGIN_EXPORT GType haudiotagger_fingerprint_plugin_get_type();
 
-FLUTTER_PLUGIN_EXPORT void haudiotagger_fingerprint_plugin_register_with_registrar(
+// ponytail: name must match what flutter_tool generates from pluginClass
+// (HaudioFingerprintPlugin), not the package name.
+FLUTTER_PLUGIN_EXPORT void haudio_fingerprint_plugin_register_with_registrar(
     FlPluginRegistrar* registrar);
 
 G_END_DECLS
 
-#endif  // FLUTTER_PLUGIN_HAUDIOTAGGER_PLUGIN_H_
+#endif  // FLUTTER_PLUGIN_HAUDIO_FINGERPRINT_PLUGIN_H_

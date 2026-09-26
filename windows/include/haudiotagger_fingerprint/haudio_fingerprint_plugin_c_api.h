@@ -1,5 +1,5 @@
-#ifndef FLUTTER_PLUGIN_HAUDIOTAGGER_PLUGIN_C_API_H_
-#define FLUTTER_PLUGIN_HAUDIOTAGGER_PLUGIN_C_API_H_
+#ifndef FLUTTER_PLUGIN_HAUDIO_FINGERPRINT_PLUGIN_C_API_H_
+#define FLUTTER_PLUGIN_HAUDIO_FINGERPRINT_PLUGIN_C_API_H_
 
 #include <flutter_plugin_registrar.h>
 
@@ -13,6 +13,8 @@
 extern "C" {
 #endif
 
+// ponytail: name must match what flutter_tool generates from pluginClass
+// (HaudioFingerprintPluginCApi), not the package name.
 FLUTTER_PLUGIN_EXPORT void HaudioFingerprintPluginCApiRegisterWithRegistrar(
     FlutterDesktopPluginRegistrarRef registrar);
 
@@ -20,4 +22,4 @@ FLUTTER_PLUGIN_EXPORT void HaudioFingerprintPluginCApiRegisterWithRegistrar(
 }  // extern "C"
 #endif
 
-#endif  // FLUTTER_PLUGIN_HAUDIOTAGGER_PLUGIN_C_API_H_
+#endif  // FLUTTER_PLUGIN_HAUDIO_FINGERPRINT_PLUGIN_C_API_H_

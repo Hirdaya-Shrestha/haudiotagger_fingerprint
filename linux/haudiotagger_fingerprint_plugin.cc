@@ -1,4 +1,4 @@
-#include "include/haudiotagger_fingerprint/haudiotagger_fingerprint_plugin.h"
+#include "include/haudiotagger_fingerprint/haudio_fingerprint_plugin.h"
 
 #include <flutter_linux/flutter_linux.h>
 #include <gtk/gtk.h>
@@ -53,7 +53,7 @@ static void method_call_cb(FlMethodChannel* channel, FlMethodCall* method_call,
   haudiotagger_fingerprint_plugin_handle_method_call(plugin, method_call);
 }
 
-void haudiotagger_fingerprint_plugin_register_with_registrar(FlPluginRegistrar* registrar) {
+void haudio_fingerprint_plugin_register_with_registrar(FlPluginRegistrar* registrar) {
   HaudioFingerprintPlugin* plugin = HAUDIOTAGGER_PLUGIN(
       g_object_new(haudiotagger_fingerprint_plugin_get_type(), nullptr));
 

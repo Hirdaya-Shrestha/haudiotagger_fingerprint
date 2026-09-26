@@ -1,4 +1,5 @@
 rust_builder/
+cli/
 build/
 .dart_tool/
 target/

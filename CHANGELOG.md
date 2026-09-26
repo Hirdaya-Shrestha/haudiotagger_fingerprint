@@ -1,3 +1,11 @@
+## 0.1.1
+
+### Bug Fixes
+
+- Fixed Linux/Windows builds: native registrant headers and symbols now match what flutter_tool generates from `pluginClass` (`haudio_fingerprint_plugin.h`, `HaudioFingerprintPluginCApiRegisterWithRegistrar`)
+- Fixed `Haudiotagger.fingerprint()` on web throwing "no backend registered": the web plugin registrant never calls `dartPluginClass`, so the web plugin class now registers the backend itself
+- Fixed source builds resolving the wrong Rust output name in `apply_cargokit`
+
 ## 0.1.0
 
 ### Features

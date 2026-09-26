@@ -1,4 +1,4 @@
-#include "include/haudiotagger_fingerprint/haudiotagger_fingerprint_plugin_c_api.h"
+#include "include/haudiotagger_fingerprint/haudio_fingerprint_plugin_c_api.h"
 
 #include <flutter/plugin_registrar_windows.h>
 

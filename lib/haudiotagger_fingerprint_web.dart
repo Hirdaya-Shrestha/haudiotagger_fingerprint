@@ -1,9 +1,2 @@
 export 'src/rust/frb_generated.web.dart';
-
-// Flutter web plugin registration contract. The actual WASM implementation
-// lives in `src/rust/frb_generated.web.dart` and is loaded by `RustLib.init()`
-// (invoked automatically on the first API call), so there is nothing to
-// register here.
-class HaudioFingerprintWeb {
-  static void registerWith([dynamic _]) {}
-}
+export 'src/web_plugin.dart';

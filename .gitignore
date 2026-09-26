@@ -10,6 +10,7 @@ target/
 
 # Native binaries (downloaded from GitHub releases at build time)
 linux/libhaudiotagger_fingerprint.so
+linux/linux.tar.gz
 android/src/main/jniLibs/
 windows/haudiotagger_fingerprint.dll
 ios/haudiotagger_fingerprint/Frameworks/
