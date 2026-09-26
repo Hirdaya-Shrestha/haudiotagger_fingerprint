@@ -351,6 +351,9 @@ jobs:
         with:
           name: ${{ matrix.target }}
           path: ${{ matrix.path }}
+          # Fail loudly here instead of surfacing as "Artifact not found"
+          # in a later download step.
+          if-no-files-found: error
 
   # ============================================================
   # BUILD WEB / WASM

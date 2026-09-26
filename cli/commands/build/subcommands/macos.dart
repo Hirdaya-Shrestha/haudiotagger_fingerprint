@@ -45,6 +45,7 @@ class MacosBuildCommand extends CliCommand
         "--target",
         "aarch64-apple-darwin",
       ],
+      workingDirectory: "$projectRootDirectory/rust",
       logger: logger,
     );
 
@@ -60,6 +61,7 @@ class MacosBuildCommand extends CliCommand
         "--target",
         "x86_64-apple-darwin",
       ],
+      workingDirectory: "$projectRootDirectory/rust",
       logger: logger,
     );
 

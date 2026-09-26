@@ -42,6 +42,7 @@ class LinuxBuildCommand extends CliCommand
         "--target",
         "x86_64-unknown-linux-gnu",
       ],
+      workingDirectory: "$projectRootDirectory/rust",
       logger: logger,
     );
 

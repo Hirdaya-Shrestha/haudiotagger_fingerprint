@@ -42,6 +42,7 @@ class WindowsBuildCommand extends CliCommand
         "--target",
         "x86_64-pc-windows-msvc",
       ],
+      workingDirectory: "$projectRootDirectory/rust",
       logger: logger,
     );
 

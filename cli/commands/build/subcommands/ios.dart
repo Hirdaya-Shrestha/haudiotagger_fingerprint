@@ -42,6 +42,7 @@ class IosBuildCommand extends CliCommand
     result = await runProcess(
       "cargo",
       ["build", "--release", "--target", "aarch64-apple-ios"],
+      workingDirectory: "$projectRootDirectory/rust",
       logger: logger,
       environment: {"IPHONEOS_DEPLOYMENT_TARGET": "10.0"},
     );
@@ -58,6 +59,7 @@ class IosBuildCommand extends CliCommand
         "--target",
         "aarch64-apple-ios-sim",
       ],
+      workingDirectory: "$projectRootDirectory/rust",
       logger: logger,
     );
 
@@ -80,6 +82,7 @@ class IosBuildCommand extends CliCommand
     result = await runProcess(
       "cargo",
       ["build", "--release", "--target", "x86_64-apple-ios"],
+      workingDirectory: "$projectRootDirectory/rust",
       logger: logger,
       environment: {"CMAKE_OSX_SYSROOT": simulatorSdkPath},
     );

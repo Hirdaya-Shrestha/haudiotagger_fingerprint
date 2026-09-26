@@ -89,6 +89,7 @@ class AndroidBuildCommand extends CliCommand
         "build",
         "--release",
       ],
+      workingDirectory: "$projectRootDirectory/rust",
       logger: logger,
     );
 
