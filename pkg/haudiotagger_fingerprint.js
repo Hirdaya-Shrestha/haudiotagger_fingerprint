@@ -199,7 +199,7 @@ let wasm_bindgen_haudiotagger_fingerprint = (function(exports) {
         wasm.wasm_start_callback();
     }
     exports.wasm_start_callback = wasm_start_callback;
-    function __wbg_get_imports() {
+    function __wbg_get_imports(memory) {
         const import0 = {
             __proto__: null,
             __wbg___wbindgen_debug_string_4687d8d8c2017d52: function(arg0, arg1) {
@@ -435,18 +435,18 @@ let wasm_bindgen_haudiotagger_fingerprint = (function(exports) {
                 return ret;
             },
             __wbindgen_generic_0000000000000001: function(arg0, arg1) {
-                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("Event")], shim_idx: 54, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
-                const ret = makeMutClosure(arg0, arg1, __wasm_bindgen_func_elem_279);
+                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("Event")], shim_idx: 32, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+                const ret = makeMutClosure(arg0, arg1, __wasm_bindgen_func_elem_286);
                 return addHeapObject(ret);
             },
             __wbindgen_generic_0000000000000002: function(arg0, arg1) {
-                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("MessageEvent")], shim_idx: 54, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
-                const ret = makeMutClosure(arg0, arg1, __wasm_bindgen_func_elem_279_12);
+                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("MessageEvent")], shim_idx: 32, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+                const ret = makeMutClosure(arg0, arg1, __wasm_bindgen_func_elem_286_12);
                 return addHeapObject(ret);
             },
             __wbindgen_generic_0000000000000003: function(arg0, arg1) {
-                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [], shim_idx: 57, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
-                const ret = makeMutClosure(arg0, arg1, __wasm_bindgen_func_elem_284);
+                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [], shim_idx: 35, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+                const ret = makeMutClosure(arg0, arg1, __wasm_bindgen_func_elem_291);
                 return addHeapObject(ret);
             },
             __wbindgen_generic_0000000000000004: function(arg0) {
@@ -466,6 +466,7 @@ let wasm_bindgen_haudiotagger_fingerprint = (function(exports) {
             __wbindgen_object_drop_ref: function(arg0) {
                 takeObject(arg0);
             },
+            memory: memory || new WebAssembly.Memory({initial:20,maximum:16384,shared:true}),
         };
         return {
             __proto__: null,
@@ -473,16 +474,16 @@ let wasm_bindgen_haudiotagger_fingerprint = (function(exports) {
         };
     }
 
-    function __wasm_bindgen_func_elem_284(arg0, arg1) {
-        wasm.__wasm_bindgen_func_elem_284(arg0, arg1);
+    function __wasm_bindgen_func_elem_291(arg0, arg1) {
+        wasm.__wasm_bindgen_func_elem_291(arg0, arg1);
     }
 
-    function __wasm_bindgen_func_elem_279(arg0, arg1, arg2) {
-        wasm.__wasm_bindgen_func_elem_279(arg0, arg1, addHeapObject(arg2));
+    function __wasm_bindgen_func_elem_286(arg0, arg1, arg2) {
+        wasm.__wasm_bindgen_func_elem_286(arg0, arg1, addHeapObject(arg2));
     }
 
-    function __wasm_bindgen_func_elem_279_12(arg0, arg1, arg2) {
-        wasm.__wasm_bindgen_func_elem_279_12(arg0, arg1, addHeapObject(arg2));
+    function __wasm_bindgen_func_elem_286_12(arg0, arg1, arg2) {
+        wasm.__wasm_bindgen_func_elem_286_12(arg0, arg1, addHeapObject(arg2));
     }
 
     const WorkerPoolFinalization = (typeof FinalizationRegistry === 'undefined')
@@ -580,7 +581,7 @@ let wasm_bindgen_haudiotagger_fingerprint = (function(exports) {
 
     let cachedDataViewMemory0 = null;
     function getDataViewMemory0() {
-        if (cachedDataViewMemory0 === null || cachedDataViewMemory0.buffer.detached === true || (cachedDataViewMemory0.buffer.detached === undefined && cachedDataViewMemory0.buffer !== wasm.memory.buffer)) {
+        if (cachedDataViewMemory0 === null || cachedDataViewMemory0.buffer !== wasm.memory.buffer) {
             cachedDataViewMemory0 = new DataView(wasm.memory.buffer);
         }
         return cachedDataViewMemory0;
@@ -592,7 +593,7 @@ let wasm_bindgen_haudiotagger_fingerprint = (function(exports) {
 
     let cachedUint8ArrayMemory0 = null;
     function getUint8ArrayMemory0() {
-        if (cachedUint8ArrayMemory0 === null || cachedUint8ArrayMemory0.byteLength === 0) {
+        if (cachedUint8ArrayMemory0 === null || cachedUint8ArrayMemory0.buffer !== wasm.memory.buffer) {
             cachedUint8ArrayMemory0 = new Uint8Array(wasm.memory.buffer);
         }
         return cachedUint8ArrayMemory0;
@@ -698,15 +699,16 @@ let wasm_bindgen_haudiotagger_fingerprint = (function(exports) {
         return ret;
     }
 
-    let cachedTextDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true });
-    cachedTextDecoder.decode();
+    let cachedTextDecoder = (typeof TextDecoder !== 'undefined' ? new TextDecoder('utf-8', { ignoreBOM: true, fatal: true }) : undefined);
+    if (cachedTextDecoder) cachedTextDecoder.decode();
+
     function decodeText(ptr, len) {
-        return cachedTextDecoder.decode(getUint8ArrayMemory0().subarray(ptr, ptr + len));
+        return cachedTextDecoder.decode(getUint8ArrayMemory0().slice(ptr, ptr + len));
     }
 
-    const cachedTextEncoder = new TextEncoder();
+    const cachedTextEncoder = (typeof TextEncoder !== 'undefined' ? new TextEncoder() : undefined);
 
-    if (!('encodeInto' in cachedTextEncoder)) {
+    if (cachedTextEncoder) {
         cachedTextEncoder.encodeInto = function (arg, view) {
             const buf = cachedTextEncoder.encode(arg);
             view.set(buf);
@@ -720,13 +722,17 @@ let wasm_bindgen_haudiotagger_fingerprint = (function(exports) {
     let WASM_VECTOR_LEN = 0;
 
     let wasmModule, wasmInstance, wasm;
-    function __wbg_finalize_init(instance, module) {
+    function __wbg_finalize_init(instance, module, thread_stack_size) {
         wasmInstance = instance;
         wasm = instance.exports;
         wasmModule = module;
         cachedDataViewMemory0 = null;
         cachedUint8ArrayMemory0 = null;
-        wasm.__wbindgen_start();
+        if (typeof thread_stack_size !== 'undefined' && (typeof thread_stack_size !== 'number' || thread_stack_size === 0 || thread_stack_size % 65536 !== 0)) {
+            throw new Error('invalid stack size');
+        }
+
+        wasm.__wbindgen_start(thread_stack_size);
         return wasm;
     }
 
@@ -769,33 +775,33 @@ let wasm_bindgen_haudiotagger_fingerprint = (function(exports) {
         }
     }
 
-    function initSync(module) {
+    function initSync(module, memory) {
         if (wasm !== undefined) return wasm;
 
-
+        let thread_stack_size
         if (module !== undefined) {
             if (Object.getPrototypeOf(module) === Object.prototype) {
-                ({module} = module)
+                ({module, memory, thread_stack_size} = module)
             } else {
                 console.warn('using deprecated parameters for `initSync()`; pass a single object instead')
             }
         }
 
-        const imports = __wbg_get_imports();
+        const imports = __wbg_get_imports(memory);
         if (!(module instanceof WebAssembly.Module)) {
             module = new WebAssembly.Module(module);
         }
         const instance = new WebAssembly.Instance(module, imports);
-        return __wbg_finalize_init(instance, module);
+        return __wbg_finalize_init(instance, module, thread_stack_size);
     }
 
-    async function __wbg_init(module_or_path) {
+    async function __wbg_init(module_or_path, memory) {
         if (wasm !== undefined) return wasm;
 
-
+        let thread_stack_size
         if (module_or_path !== undefined) {
             if (Object.getPrototypeOf(module_or_path) === Object.prototype) {
-                ({module_or_path} = module_or_path)
+                ({module_or_path, memory, thread_stack_size} = module_or_path)
             } else {
                 console.warn('using deprecated parameters for the initialization function; pass a single object instead')
             }
@@ -804,7 +810,7 @@ let wasm_bindgen_haudiotagger_fingerprint = (function(exports) {
         if (module_or_path === undefined && script_src !== undefined) {
             module_or_path = script_src.replace(/\.js$/, "_bg.wasm");
         }
-        const imports = __wbg_get_imports();
+        const imports = __wbg_get_imports(memory);
 
         if (typeof module_or_path === 'string' || (typeof Request === 'function' && module_or_path instanceof Request) || (typeof URL === 'function' && module_or_path instanceof URL)) {
             module_or_path = fetch(module_or_path);
@@ -812,7 +818,7 @@ let wasm_bindgen_haudiotagger_fingerprint = (function(exports) {
 
         const { instance, module } = await __wbg_load(await module_or_path, imports);
 
-        return __wbg_finalize_init(instance, module);
+        return __wbg_finalize_init(instance, module, thread_stack_size);
     }
 
     return Object.assign(__wbg_init, { initSync }, exports);
