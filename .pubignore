@@ -5,7 +5,7 @@ target/
 rust/target/
 rust/pkg/
 .git/
-test/fixtures/
+test/
 example/build/
 example/linux/
 example/macos/
