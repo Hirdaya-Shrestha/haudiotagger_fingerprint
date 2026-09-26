@@ -1,27 +1,29 @@
-import 'dart:io';
-import 'dart:typed_data';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:haudiotagger_fingerprint/haudiotagger_fingerprint.dart';
 import 'package:haudiotagger_fingerprint/src/web_plugin.dart';
 import 'package:haudiotagger_interface/haudiotagger_interface.dart' as iface;
+import 'dart:typed_data';
+
+import 'test_utils.dart';
 
 // Proves the federated wiring: the dartPluginClass registration hooks the
 // real Rust backend into the shared registry — the same path
 // Haudiotagger.fingerprint() takes when both packages are installed.
+//
+// Uses synthesized WAV bytes (no dart:io) so these tests also run in a real
+// browser via `flutter test --platform chrome`.
 void main() {
   test('dartPluginClass registration wires the real backend', () async {
     HaudioFingerprintBackend.registerWith();
-    final fp = await iface.FingerprintRegistry.instance.fingerprintFromBytes(
-      File('test/fixtures/chirp.mp3').readAsBytesSync(),
-    );
+    final fp = await iface.FingerprintRegistry.instance
+        .fingerprintFromBytes(makeSweepWav());
     expect(fp.values, isNotEmpty);
-    expect(fp.durationSecs, 5);
+    expect(fp.durationSecs, 3);
   });
 
   test('registry similarity scores identical audio 1.0', () async {
     HaudioFingerprintBackend.registerWith();
-    final bytes = File('test/fixtures/chirp.flac').readAsBytesSync();
+    final bytes = makeSweepWav(f0: 440.0, f1: 660.0);
     final a =
         await iface.FingerprintRegistry.instance.fingerprintFromBytes(bytes);
     final b =
@@ -36,9 +38,8 @@ void main() {
     // registered" even with the package installed.
     iface.FingerprintRegistry.instance = _UnregisteredProbe();
     HaudioFingerprintWeb.registerWith();
-    final fp = await iface.FingerprintRegistry.instance.fingerprintFromBytes(
-      File('test/fixtures/chirp.ogg').readAsBytesSync(),
-    );
+    final fp = await iface.FingerprintRegistry.instance
+        .fingerprintFromBytes(makeSweepWav(f0: 200.0, f1: 300.0));
     expect(fp.values, isNotEmpty);
   });
 }
