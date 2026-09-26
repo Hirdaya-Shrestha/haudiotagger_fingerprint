@@ -1,0 +1,20 @@
+.dart_tool/
+.packages
+build/
+.pub/
+pubspec.lock
+target/
+.fvm/
+.mason/
+
+# Native binaries (downloaded from GitHub releases at build time)
+linux/libhaudiotagger_fingerprint.so
+android/src/main/jniLibs/
+windows/haudiotagger_fingerprint.dll
+ios/haudiotagger_fingerprint/Frameworks/
+macos/haudiotagger_fingerprint/Frameworks/
+
+# Local build outputs
+rust/target/
+rust/pkg/
+samples/

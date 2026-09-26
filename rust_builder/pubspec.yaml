@@ -1,0 +1,36 @@
+name: rust_lib_haudiotagger_fingerprint
+description: "Rust native library builder for haudiotagger_fingerprint — compiles lofty-based audio metadata reader/writer for Flutter."
+version: 2.1.0
+homepage: https://github.com/Hirdaya-Shrestha/haudiotagger_fingerprint
+repository: https://github.com/Hirdaya-Shrestha/haudiotagger_fingerprint
+documentation: https://github.com/Hirdaya-Shrestha/haudiotagger_fingerprint/wiki
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+  flutter: '>=3.6.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  plugin_platform_interface: ^2.0.2
+
+dev_dependencies:
+  ffi: ^2.0.2
+  ffigen: ^11.0.0
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        ffiPlugin: true
+      ios:
+        ffiPlugin: true
+      linux:
+        ffiPlugin: true
+      macos:
+        ffiPlugin: true
+      windows:
+        ffiPlugin: true

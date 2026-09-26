@@ -1,0 +1,890 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  # ============================================================
+  # BUMP VERSION
+  # ============================================================
+  bump_version:
+    name: Bump Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.extract.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Extract version from tag
+        id: extract
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Update all version references
+        run: |
+          VERSION="${{ steps.extract.outputs.version }}"
+          OLD_VERSION=$(grep -oP '\d+\.\d+\.\d+' pubspec.yaml | head -1)
+
+          # Cargo.toml
+          sed -i "s/^version = .*/version = \"${VERSION}\"/" \
+            rust/Cargo.toml
+
+          # pubspec.yaml
+          sed -i "s/^version: .*/version: ${VERSION}/" \
+            pubspec.yaml
+
+          # rust_builder/pubspec.yaml
+          sed -i "s/^version: .*/version: ${VERSION}/" \
+            rust_builder/pubspec.yaml
+
+          # iOS Podspec
+          sed -i "s/^version = .*/version = \"${VERSION}\"/" \
+            ios/haudiotagger_fingerprint.podspec
+
+          sed -i "s/^  s.version .*/  s.version = '${VERSION}'/" \
+            ios/haudiotagger_fingerprint.podspec
+
+          # macOS Podspec
+          sed -i "s/^version = .*/version = \"${VERSION}\"/" \
+            macos/haudiotagger_fingerprint.podspec
+
+          sed -i "s/^  s.version .*/  s.version = '${VERSION}'/" \
+            macos/haudiotagger_fingerprint.podspec
+
+          # CMakeLists.txt
+          sed -i "s/^set(Version .*/set(Version \"${VERSION}\")/" \
+            android/CMakeLists.txt
+
+          sed -i "s/^set(Version .*/set(Version \"${VERSION}\")/" \
+            linux/CMakeLists.txt
+
+          sed -i "s/^set(Version .*/set(Version \"${VERSION}\")/" \
+            windows/CMakeLists.txt
+
+          # README.md
+          sed -i "s/haudiotagger_fingerprint: \^${OLD_VERSION}/haudiotagger_fingerprint: ^${VERSION}/" \
+            README.md
+
+          sed -i "s/hAudiotagger ${OLD_VERSION}/hAudiotagger ${VERSION}/" \
+            README.md
+
+          sed -i "s/\`${OLD_VERSION}\`/\`${VERSION}\`/g" \
+            README.md
+
+      - name: Commit version bump
+        run: |
+          git config user.name "Hirdaya-Shrestha"
+          git config user.email "hirdaya098@gmail.com"
+
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "No version changes to commit"
+          else
+            git commit -m "chore: bump version to ${{ steps.extract.outputs.version }}"
+            git push origin HEAD:main
+          fi
+
+  # ============================================================
+  # BUILD FRAMEWORKS
+  # ============================================================
+  build_frameworks:
+    name: Build Frameworks
+    needs: bump_version
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          cache: true
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Flutter pub get
+        working-directory: .
+        run: flutter pub get
+
+      - name: CLI pub get
+        working-directory: cli
+        run: flutter pub get
+
+      - name: Build iOS xcframework
+        run: dart run cli build ios -v
+
+      - name: Build macOS xcframework
+        run: dart run cli build macos -v
+
+      - name: Verify frameworks
+        run: |
+          set -e
+
+          echo "=== iOS Framework ==="
+          ls -la ios/Frameworks/ 2>/dev/null || true
+          find ios/Frameworks \
+            -maxdepth 3 \
+            -type f \
+            2>/dev/null || true
+
+          echo
+          echo "=== macOS Framework ==="
+          ls -la macos/Frameworks/ 2>/dev/null || true
+          find macos/Frameworks \
+            -maxdepth 3 \
+            -type f \
+            2>/dev/null || true
+
+          test -d ios/Frameworks/haudiotagger_fingerprint.xcframework
+          test -d macos/Frameworks/haudiotagger_fingerprint.xcframework
+
+      - name: Create release ZIP archives
+        run: |
+          set -e
+
+          cd ios/Frameworks
+          zip -r ios.zip haudiotagger_fingerprint.xcframework
+
+          cd "$GITHUB_WORKSPACE/macos/Frameworks"
+          zip -r macos.zip haudiotagger_fingerprint.xcframework
+
+          echo "=== iOS ZIP ==="
+          unzip -l "$GITHUB_WORKSPACE/ios/Frameworks/ios.zip"
+
+          echo
+          echo "=== macOS ZIP ==="
+          unzip -l "$GITHUB_WORKSPACE/macos/Frameworks/macos.zip"
+
+      - name: Upload iOS xcframework
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-spm
+          path: ios/Frameworks/haudiotagger_fingerprint.xcframework
+
+      - name: Upload macOS xcframework
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-spm
+          path: macos/Frameworks/haudiotagger_fingerprint.xcframework
+
+      - name: Upload iOS ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-zip
+          path: ios/Frameworks/ios.zip
+
+      - name: Upload macOS ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-zip
+          path: macos/Frameworks/macos.zip
+
+  # ============================================================
+  # LINT
+  # ============================================================
+  rust_lint:
+    name: Rust Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          cache: true
+
+      - name: Flutter pub get
+        working-directory: .
+        run: flutter pub get
+
+      - name: Format
+        working-directory: rust
+        run: cargo fmt --check
+
+      - name: Clippy
+        working-directory: rust
+        run: cargo clippy
+
+  dart_lint:
+    name: Dart Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          cache: true
+
+      - name: Flutter pub get
+        working-directory: .
+        run: flutter pub get
+
+      - name: Format
+        working-directory: lib/src
+        run: dart format --set-exit-if-changed .
+
+      - name: Lint
+        working-directory: lib/src
+        run: dart analyze --fatal-infos
+
+      - name: Format Example
+        working-directory: example/lib
+        run: dart format --set-exit-if-changed .
+
+      - name: Lint Example
+        working-directory: example/lib
+        run: dart analyze --fatal-infos
+
+  dart_cli_lint:
+    name: Dart CLI Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          cache: true
+
+      - name: Flutter pub get
+        working-directory: cli
+        run: flutter pub get
+
+      - name: Format
+        working-directory: cli
+        run: dart format --set-exit-if-changed .
+
+      - name: Lint
+        working-directory: cli
+        run: dart analyze --fatal-infos
+
+  # ============================================================
+  # BUILD NATIVE ARTIFACTS
+  # ============================================================
+  build_and_upload:
+    name: Build ${{ matrix.target }}
+    needs:
+      - bump_version
+      - build_frameworks
+      - rust_lint
+      - dart_lint
+      - dart_cli_lint
+
+    strategy:
+      fail-fast: false
+
+      matrix:
+        include:
+          - target: linux
+            os: ubuntu-22.04
+            path: linux/libhaudiotagger_fingerprint.so
+
+          - target: android
+            os: ubuntu-latest
+            path: |
+              android/src/main/jniLibs/arm64-v8a/libhaudiotagger_fingerprint.so
+              android/src/main/jniLibs/armeabi-v7a/libhaudiotagger_fingerprint.so
+              android/src/main/jniLibs/x86_64/libhaudiotagger_fingerprint.so
+              android/src/main/jniLibs/x86/libhaudiotagger_fingerprint.so
+
+          - target: windows
+            os: windows-latest
+            path: windows/haudiotagger_fingerprint.dll
+
+          - target: macos
+            os: macos-latest
+            path: macos/Frameworks/haudiotagger_fingerprint.xcframework
+
+          - target: ios
+            os: macos-latest
+            path: ios/Frameworks/haudiotagger_fingerprint.xcframework
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          cache: true
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Flutter pub get
+        working-directory: .
+        run: flutter pub get
+
+      - name: CLI pub get
+        working-directory: cli
+        run: flutter pub get
+
+      - name: Install MUSL dependencies
+        if: matrix.target == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+
+      - name: Build
+        run: dart run cli build ${{ matrix.target }} -v
+
+      - name: Upload native artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: ${{ matrix.path }}
+
+  # ============================================================
+  # BUILD WEB / WASM
+  # ============================================================
+  build_web:
+    name: Build Web WASM
+    needs:
+      - bump_version
+      - build_frameworks
+      - rust_lint
+      - dart_lint
+      - dart_cli_lint
+
+    runs-on: ubuntu-latest
+
+    env:
+      RUSTUP_TOOLCHAIN: nightly
+      CARGO_UNSTABLE_BUILD_STD: std,panic_abort
+      CARGO_TARGET_DIR: ${{ github.workspace }}/rust/target
+      RUSTFLAGS: "-C target-feature=+atomics,+bulk-memory,+mutable-globals -C link-arg=--shared-memory -C link-arg=--import-memory -C link-arg=--max-memory=1073741824 -C link-arg=--export=__heap_base -C link-arg=--export=__wasm_init_tls -C link-arg=--export=__tls_size -C link-arg=--export=__tls_align -C link-arg=--export=__tls_base -C link-arg=--export=__stack_pointer"
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: wasm32-unknown-unknown
+          components: rust-src
+
+      - name: Cache Rust WASM build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+          key: wasm
+
+      - name: Install wasm-bindgen-cli
+        run: |
+          curl -L \
+            https://github.com/rustwasm/wasm-bindgen/releases/download/0.2.129/wasm-bindgen-0.2.129-x86_64-unknown-linux-musl.tar.gz \
+            -o wb.tar.gz
+
+          tar xzf wb.tar.gz
+
+          echo "$PWD/wasm-bindgen-0.2.129-x86_64-unknown-linux-musl" >> "$GITHUB_PATH"
+
+      - name: Build WASM
+        run: |
+          cargo +nightly build \
+            --manifest-path rust/Cargo.toml \
+            --target wasm32-unknown-unknown \
+            -Z build-std=std,panic_abort \
+            --release
+
+      - name: Run wasm-bindgen
+        run: |
+          wasm-bindgen \
+            rust/target/wasm32-unknown-unknown/release/haudiotagger_fingerprint.wasm \
+            --out-dir rust/pkg \
+            --no-typescript \
+            --target no-modules
+
+      - name: Stage WASM files
+        run: |
+          mkdir -p pkg
+
+          cp rust/pkg/haudiotagger_fingerprint_bg.wasm \
+            pkg/haudiotagger_fingerprint_bg.wasm
+
+          cp rust/pkg/haudiotagger_fingerprint.js \
+            pkg/haudiotagger_fingerprint.js
+
+          cp rust/pkg/haudiotagger_fingerprint_bg.wasm \
+            haudiotagger_fingerprint_bg.wasm
+
+          cp rust/pkg/haudiotagger_fingerprint.js \
+            haudiotagger_fingerprint.js
+
+      - name: Upload Web artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: web
+          path: |
+            haudiotagger_fingerprint_bg.wasm
+            haudiotagger_fingerprint.js
+
+      - name: Upload package WASM
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-wasm
+          path: |
+            pkg/haudiotagger_fingerprint.js
+            pkg/haudiotagger_fingerprint_bg.wasm
+
+  # ============================================================
+  # GITHUB RELEASE
+  # ============================================================
+  publish_to_release:
+    name: Publish Artifacts to GitHub Release
+    needs:
+      - bump_version
+      - build_frameworks
+      - build_and_upload
+      - build_web
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Linux
+        uses: actions/download-artifact@v4
+        with:
+          name: linux
+          path: linux
+
+      - name: Download Android
+        uses: actions/download-artifact@v4
+        with:
+          name: android
+          path: android
+
+      - name: Download Windows
+        uses: actions/download-artifact@v4
+        with:
+          name: windows
+          path: windows
+
+      - name: Download iOS ZIP
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-zip
+          path: ios-zip
+
+      - name: Download macOS ZIP
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-zip
+          path: macos-zip
+
+      - name: Download Web
+        uses: actions/download-artifact@v4
+        with:
+          name: web
+          path: web
+
+      - name: Create archives
+        shell: bash
+        run: |
+          set -e
+
+          tar -C linux -czvf linux.tar.gz .
+          tar -C android -czvf android.tar.gz .
+          tar -C windows -czvf windows.tar.gz .
+
+          cp ios-zip/ios.zip ios.zip
+          cp macos-zip/macos.zip macos.zip
+
+      - name: Verify release files
+        run: |
+          set -e
+
+          echo "=== Release files ==="
+          ls -lh \
+            linux.tar.gz \
+            android.tar.gz \
+            windows.tar.gz \
+            ios.zip \
+            macos.zip \
+            web/haudiotagger_fingerprint_bg.wasm \
+            web/haudiotagger_fingerprint.js
+
+          echo
+          echo "=== iOS ZIP ==="
+          unzip -l ios.zip
+
+          echo
+          echo "=== macOS ZIP ==="
+          unzip -l macos.zip
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            linux.tar.gz
+            android.tar.gz
+            windows.tar.gz
+            ios.zip
+            macos.zip
+            web/haudiotagger_fingerprint_bg.wasm
+            web/haudiotagger_fingerprint.js
+
+  # ============================================================
+  # UPDATE SWIFT PACKAGE MANAGER
+  # ============================================================
+  update_spm:
+    name: Update Swift Package Manager
+    needs:
+      - bump_version
+      - publish_to_release
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      # The macOS/iOS SPM manifests below reference a Sources/haudiotagger_fingerprint
+      # Swift target that is checked into the repo (not generated here). If
+      # it's ever missing, Package.swift would resolve but Flutter's
+      # GeneratedPluginRegistrant would fail with "unable to resolve module
+      # dependency: 'haudiotagger_fingerprint'" at app build time instead of here, which
+      # is much harder to diagnose. Fail fast instead.
+      - name: Verify Swift plugin sources exist
+        run: |
+          set -e
+          test -f macos/Sources/HaudioFingerprintPlugin.swift
+          test -f ios/Sources/HaudioFingerprintPlugin.swift
+          echo "Swift plugin sources present for macOS and iOS SPM packages."
+
+      - name: Download released iOS and macOS ZIPs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+
+          VERSION="${{ needs.bump_version.outputs.version }}"
+          TAG="v${VERSION}"
+
+          mkdir -p /tmp/spm
+
+          echo "Downloading iOS release archive..."
+          gh release download "$TAG" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --pattern "ios.zip" \
+            --dir /tmp/spm
+
+          echo "Downloading macOS release archive..."
+          gh release download "$TAG" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --pattern "macos.zip" \
+            --dir /tmp/spm
+
+          echo
+          echo "=== Downloaded archives ==="
+          ls -lh /tmp/spm
+
+      - name: Generate SPM checksums
+        id: checksum
+        run: |
+          set -e
+
+          IOS_CHECKSUM=$(sha256sum /tmp/spm/ios.zip | awk '{print $1}')
+          MACOS_CHECKSUM=$(sha256sum /tmp/spm/macos.zip | awk '{print $1}')
+
+          echo "iOS checksum:"
+          echo "$IOS_CHECKSUM"
+
+          echo
+          echo "macOS checksum:"
+          echo "$MACOS_CHECKSUM"
+
+          echo "ios=$IOS_CHECKSUM" >> "$GITHUB_OUTPUT"
+          echo "macos=$MACOS_CHECKSUM" >> "$GITHUB_OUTPUT"
+
+      # NOTE: the binaryTarget is named "haudiotagger_fingerprintFFI", not "haudiotagger_fingerprint".
+      # The "haudiotagger_fingerprint" product now points at a regular .target that
+      # compiles Sources/HaudioFingerprintPlugin.swift and depends on
+      # the binary. Without that Swift target, this manifest resolves fine
+      # but Flutter's `import haudiotagger_fingerprint` can't find a real module (a
+      # binaryTarget alone has no Swift interface) -- that was the root
+      # cause of the "unable to resolve module dependency" build failures.
+      - name: Update macOS Package.swift
+        env:
+          VERSION: ${{ needs.bump_version.outputs.version }}
+          MACOS_CHECKSUM: ${{ steps.checksum.outputs.macos }}
+        run: |
+          cat > macos/Package.swift <<EOF
+          // swift-tools-version: 5.9
+          import PackageDescription
+
+          let package = Package(
+              name: "haudiotagger_fingerprint",
+              platforms: [.macOS(.v10_14)],
+              products: [
+                  .library(name: "haudiotagger_fingerprint", targets: ["haudiotagger_fingerprint"])
+              ],
+              targets: [
+                  .binaryTarget(
+                      name: "haudiotagger_fingerprintFFI",
+                      url: "https://github.com/Hirdaya-Shrestha/haudiotagger_fingerprint/releases/download/v${VERSION}/macos.zip",
+                      checksum: "${MACOS_CHECKSUM}"
+                  ),
+                  .target(
+                      name: "haudiotagger_fingerprint",
+                      dependencies: ["haudiotagger_fingerprintFFI"],
+                      path: "Sources/haudiotagger_fingerprint"
+                  )
+              ]
+          )
+          EOF
+
+      - name: Update iOS Package.swift
+        env:
+          VERSION: ${{ needs.bump_version.outputs.version }}
+          IOS_CHECKSUM: ${{ steps.checksum.outputs.ios }}
+        run: |
+          cat > ios/Package.swift <<EOF
+          // swift-tools-version: 5.9
+          import PackageDescription
+
+          let package = Package(
+              name: "haudiotagger_fingerprint",
+              platforms: [.iOS(.v12)],
+              products: [
+                  .library(name: "haudiotagger_fingerprint", targets: ["haudiotagger_fingerprint"])
+              ],
+              targets: [
+                  .binaryTarget(
+                      name: "haudiotagger_fingerprintFFI",
+                      url: "https://github.com/Hirdaya-Shrestha/haudiotagger_fingerprint/releases/download/v${VERSION}/ios.zip",
+                      checksum: "${IOS_CHECKSUM}"
+                  ),
+                  .target(
+                      name: "haudiotagger_fingerprint",
+                      dependencies: ["haudiotagger_fingerprintFFI"],
+                      path: "Sources/haudiotagger_fingerprint"
+                  )
+              ]
+          )
+          EOF
+
+      - name: Verify Package.swift files
+        run: |
+          set -e
+
+          echo "=========================================="
+          echo "macOS Package.swift"
+          echo "=========================================="
+
+          cat macos/Package.swift
+
+          echo
+          echo "=========================================="
+          echo "iOS Package.swift"
+          echo "=========================================="
+
+          cat ios/Package.swift
+
+      - name: Verify checksums
+        run: |
+          set -e
+
+          IOS_CHECKSUM=$(sha256sum /tmp/spm/ios.zip | awk '{print $1}')
+          MACOS_CHECKSUM=$(sha256sum /tmp/spm/macos.zip | awk '{print $1}')
+
+          grep -q "$IOS_CHECKSUM" \
+            ios/Package.swift
+
+          grep -q "$MACOS_CHECKSUM" \
+            macos/Package.swift
+
+          echo "iOS checksum verified."
+          echo "macOS checksum verified."
+
+      - name: Commit and push Package.swift
+        run: |
+          set -e
+
+          VERSION="${{ needs.bump_version.outputs.version }}"
+
+          git config user.name "Hirdaya-Shrestha"
+          git config user.email "hirdaya098@gmail.com"
+
+          git add \
+            ios/Package.swift \
+            macos/Package.swift
+
+          if git diff --cached --quiet; then
+            echo "No Package.swift changes to commit"
+          else
+            git commit -m "build: update SPM packages for ${VERSION}"
+            git push origin HEAD:main
+          fi
+
+  # ============================================================
+  # PUBLISH TO PUB.DEV
+  # ============================================================
+  publish:
+    name: Publish to pub.dev
+    needs:
+      - bump_version
+      - build_and_upload
+      - build_web
+      - publish_to_release
+      - update_spm
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - uses: dart-lang/setup-dart@v1
+
+      - name: Download native artifacts (linux)
+        uses: actions/download-artifact@v4
+        with:
+          name: linux
+          path: dl/linux
+
+      - name: Download native artifacts (android)
+        uses: actions/download-artifact@v4
+        with:
+          name: android
+          path: dl/android
+
+      - name: Download native artifacts (windows)
+        uses: actions/download-artifact@v4
+        with:
+          name: windows
+          path: dl/windows
+
+      - name: Download native artifacts (macos)
+        uses: actions/download-artifact@v4
+        with:
+          name: macos
+          path: dl/macos
+
+      - name: Download native artifacts (ios)
+        uses: actions/download-artifact@v4
+        with:
+          name: ios
+          path: dl/ios
+
+      - name: Download Web artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: package-wasm
+          path: dl/package-wasm
+
+      - name: Stage fresh native + web artifacts into package
+        shell: bash
+        run: |
+          set -e
+
+          mkcp() {
+            local d n dst found
+
+            d="$1"
+            n="$2"
+            dst="$3"
+
+            found=$(find "$d" -name "$n" | head -1)
+
+            if [ -z "$found" ]; then
+              echo "WARN: $n not found under $d"
+              return 0
+            fi
+
+            mkdir -p "$(dirname "$dst")"
+            cp -r "$found" "$dst"
+
+            echo "staged $found -> $dst"
+          }
+
+          mkcp dl/linux \
+            libhaudiotagger_fingerprint.so \
+            linux/libhaudiotagger_fingerprint.so
+
+          mkcp dl/windows \
+            haudiotagger_fingerprint.dll \
+            windows/haudiotagger_fingerprint.dll
+
+          mkcp dl/macos \
+            haudiotagger_fingerprint.xcframework \
+            macos/Frameworks/haudiotagger_fingerprint.xcframework
+
+          mkcp dl/ios \
+            haudiotagger_fingerprint.xcframework \
+            ios/Frameworks/haudiotagger_fingerprint.xcframework
+
+          mkcp dl/package-wasm \
+            haudiotagger_fingerprint.js \
+            pkg/haudiotagger_fingerprint.js
+
+          mkcp dl/package-wasm \
+            haudiotagger_fingerprint_bg.wasm \
+            pkg/haudiotagger_fingerprint_bg.wasm
+
+          while IFS= read -r f; do
+            rel=${f#dl/android/}
+            rel=${rel#}
+
+            mkdir -p "$(dirname "$rel")"
+            cp -r "$f" "$rel"
+
+            echo "staged $f -> $rel"
+          done < <(find dl/android -name 'libhaudiotagger_fingerprint.so')
+
+          echo "Staged native/web artifacts."
+
+      - name: Remove local Rust dependency
+        working-directory: .
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("pubspec.yaml")
+          text = path.read_text()
+
+          old = "  rust_lib_haudiotagger_fingerprint:\n    path: rust_builder\n"
+
+          if old not in text:
+              raise SystemExit(
+                  "Could not find rust_lib_haudiotagger_fingerprint path dependency"
+              )
+
+          path.write_text(text.replace(old, ""))
+
+          PY
+
+          echo "Publish pubspec:"
+          cat pubspec.yaml
+
+      - name: Get dependencies
+        working-directory: .
+        run: flutter pub get
+
+      - name: Publish to pub.dev (OIDC)
+        working-directory: .
+        run: flutter pub publish --force
