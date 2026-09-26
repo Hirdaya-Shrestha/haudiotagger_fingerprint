@@ -9,9 +9,8 @@ export 'rust/api/error.dart' show FingerprintError;
 
 /// Perceptual audio fingerprinting.
 ///
-/// Works alongside `haudiotagger` (which reads metadata): fingerprint the
-/// *content* to find duplicates, renames, and re-encodes regardless of
-/// tags or filenames.
+/// Fingerprint the *content* to find duplicates, renames, and re-encodes
+/// regardless of tags or filenames.
 ///
 /// ```dart
 /// final a = await HaudioFingerprint.fingerprint('Song A.mp3');

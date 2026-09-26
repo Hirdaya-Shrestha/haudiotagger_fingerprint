@@ -40,10 +40,6 @@ Song A (Remastered).mp3
 
 can be compared by content instead of by name.
 
-It is the sibling of [`haudiotagger`](https://github.com/Hirdaya-Shrestha/haudiotagger):
-haudiotagger reads metadata, this package fingerprints audio. Use them together
-or separately — they are independent packages with no shared native symbols.
-
 ### Highlights
 
 - 🧬 Chromaprint-compatible perceptual fingerprints (same algorithm as fpcalc/AcoustID)
@@ -102,21 +98,10 @@ print(await a.similarityTo(b));
 final fp = await HaudioFingerprint.fingerprintFromBytes(bytes);
 ```
 
-### Duplicate detection with haudiotagger
+### Finding duplicates
 
-The two packages are independent — install either, both, or neither together —
-and compose with two imports, zero conflicts:
-
-```dart
-import 'package:haudiotagger/haudiotagger.dart';
-import 'package:haudiotagger_fingerprint/haudiotagger_fingerprint.dart';
-
-final tag = await Haudiotagger.read(path);            // metadata for display
-final fp = await HaudioFingerprint.fingerprint(path); // content for matching
-```
-
-Group files with `similarity >= 0.8` as the same recording, then use the tag
-(title/artist/duration) to pick which copy to keep.
+Group files with `similarity >= 0.8` as the same recording, then use each
+file's metadata (title/artist/duration) to pick which copy to keep.
 
 ---
 
@@ -158,21 +143,6 @@ Group files with `similarity >= 0.8` as the same recording, then use the tag
 The Web implementation decodes and fingerprints fully in-browser via
 WebAssembly. Large files are CPU-heavy; prefer short clips or native
 for bulk library scans.
-
----
-
-## Compatibility with haudiotagger
-
-- Separate Dart package, Rust crate (`haudiotagger_fingerprint`), native
-  libraries (`libhaudiotagger_fingerprint.*`), and plugin classes — verified
-  zero overlapping exported native symbols.
-- Both plugins pin the same `flutter_rust_bridge` version (`=2.13.0`);
-  keep them in sync when upgrading.
-- Known upstream limitation: two flutter_rust_bridge plugins in one app can
-  hit duplicate `frb_*` runtime symbols on iOS **static** linking
-  ([FRB #2972](https://github.com/fzyzcjy/flutter_rust_bridge/issues/2972)).
-  Dynamic linking (FRB v2's `DynamicLibrary.open` path) avoids it. This
-  affects any pair of FRB plugins, not just these two.
 
 ---
 
