@@ -3,6 +3,7 @@ build/
 .dart_tool/
 target/
 rust/target/
+rust/pkg/
 .git/
 test/fixtures/
 example/build/
