@@ -571,8 +571,8 @@ jobs:
       - name: Verify Swift plugin sources exist
         run: |
           set -e
-          test -f macos/Sources/HaudioFingerprintPlugin.swift
-          test -f ios/Sources/HaudioFingerprintPlugin.swift
+          test -f macos/haudiotagger_fingerprint/Sources/haudiotagger_fingerprint/HaudioFingerprintPlugin.swift
+          test -f ios/haudiotagger_fingerprint/Sources/haudiotagger_fingerprint/HaudioFingerprintPlugin.swift
           echo "Swift plugin sources present for macOS and iOS SPM packages."
 
       - name: Download released iOS and macOS ZIPs
@@ -632,7 +632,7 @@ jobs:
           VERSION: ${{ needs.bump_version.outputs.version }}
           MACOS_CHECKSUM: ${{ steps.checksum.outputs.macos }}
         run: |
-          cat > macos/Package.swift <<EOF
+          cat > macos/haudiotagger_fingerprint/Package.swift <<EOF
           // swift-tools-version: 5.9
           import PackageDescription
 
@@ -662,7 +662,7 @@ jobs:
           VERSION: ${{ needs.bump_version.outputs.version }}
           IOS_CHECKSUM: ${{ steps.checksum.outputs.ios }}
         run: |
-          cat > ios/Package.swift <<EOF
+          cat > ios/haudiotagger_fingerprint/Package.swift <<EOF
           // swift-tools-version: 5.9
           import PackageDescription
 
@@ -695,14 +695,14 @@ jobs:
           echo "macOS Package.swift"
           echo "=========================================="
 
-          cat macos/Package.swift
+          cat macos/haudiotagger_fingerprint/Package.swift
 
           echo
           echo "=========================================="
           echo "iOS Package.swift"
           echo "=========================================="
 
-          cat ios/Package.swift
+          cat ios/haudiotagger_fingerprint/Package.swift
 
       - name: Verify checksums
         run: |
@@ -712,10 +712,10 @@ jobs:
           MACOS_CHECKSUM=$(sha256sum /tmp/spm/macos.zip | awk '{print $1}')
 
           grep -q "$IOS_CHECKSUM" \
-            ios/Package.swift
+            ios/haudiotagger_fingerprint/Package.swift
 
           grep -q "$MACOS_CHECKSUM" \
-            macos/Package.swift
+            macos/haudiotagger_fingerprint/Package.swift
 
           echo "iOS checksum verified."
           echo "macOS checksum verified."
@@ -730,8 +730,8 @@ jobs:
           git config user.email "hirdaya098@gmail.com"
 
           git add \
-            ios/Package.swift \
-            macos/Package.swift
+            ios/haudiotagger_fingerprint/Package.swift \
+            macos/haudiotagger_fingerprint/Package.swift
 
           if git diff --cached --quiet; then
             echo "No Package.swift changes to commit"
