@@ -1,3 +1,9 @@
+## 0.1.4
+
+### Bug Fixes
+
+- Fixed macOS/iOS Swift Package Manager resolution: the vended library product is now `haudiotagger-fingerprint` (hyphenated, as flutter_tool requires — underscores are illegal in the derived CFBundleIdentifier), while package and target names stay unchanged
+
 ## 0.1.3
 
 ### Bug Fixes
