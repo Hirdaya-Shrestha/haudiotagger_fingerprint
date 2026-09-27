@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo.png" alt="haudiotagger_fingerprint" width="140">
+  <img src="https://raw.githubusercontent.com/Hirdaya-Shrestha/haudiotagger_fingerprint/main/logo.png" alt="haudiotagger_fingerprint" width="140">
 </p>
 
 <h1 align="center">haudiotagger_fingerprint</h1>
