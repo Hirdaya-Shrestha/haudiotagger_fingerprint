@@ -1,6 +1,6 @@
 name: haudiotagger_fingerprint
 description: Perceptual audio fingerprinting for Flutter. Identify and compare recordings by content - duplicate detection, library cleanup, song matching. Powered by Rust.
-version: 0.1.3
+version: 0.1.4
 homepage: https://github.com/Hirdaya-Shrestha/haudiotagger_fingerprint
 repository: https://github.com/Hirdaya-Shrestha/haudiotagger_fingerprint
 

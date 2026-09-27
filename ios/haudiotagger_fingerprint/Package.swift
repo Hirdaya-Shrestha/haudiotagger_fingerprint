@@ -5,7 +5,7 @@ let package = Package(
     name: "haudiotagger_fingerprint",
     platforms: [.iOS(.v12)],
     products: [
-        .library(name: "haudiotagger_fingerprint", targets: ["haudiotagger_fingerprint"])
+        .library(name: "haudiotagger-fingerprint", targets: ["haudiotagger_fingerprint"])
     ],
     targets: [
         .binaryTarget(
