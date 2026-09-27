@@ -56,7 +56,7 @@ Add haudiotagger_fingerprint to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  haudiotagger_fingerprint: ^0.1.3
+  haudiotagger_fingerprint: ^0.1.4
 ```
 
 Or install it from the command line:
