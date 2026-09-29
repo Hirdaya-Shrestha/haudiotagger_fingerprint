@@ -16,6 +16,7 @@
   <a href="https://pub.dev/packages/haudiotagger_fingerprint"><img src="https://img.shields.io/pub/v/haudiotagger_fingerprint.svg?label=pub.dev&color=0175C2" alt="pub.dev"></a>
   <a href="https://github.com/Hirdaya-Shrestha/haudiotagger_fingerprint/actions"><img src="https://github.com/Hirdaya-Shrestha/haudiotagger_fingerprint/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-4285F4.svg" alt="MIT License"></a>
+  <a href="https://pub.dev/packages/haudiotagger_fingerprint"><img src="https://img.shields.io/pub/dm/haudiotagger_fingerprint?label=Downloads&logo=dart" alt="Downloads"></a>
 </p>
 
 <p align="center">
