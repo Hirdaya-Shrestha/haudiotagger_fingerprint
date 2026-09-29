@@ -1,5 +1,5 @@
 # Download the binary from GitHub.
-version = "0.1.4"
+version = "0.2.0"
 lib_url = "https://github.com/Hirdaya-Shrestha/haudiotagger_fingerprint/releases/download/v#{version}/macos.zip"
 
 `
@@ -17,7 +17,7 @@ cd ..
 
 Pod::Spec.new do |s|
   s.name             = 'haudiotagger_fingerprint'
-  s.version = '0.1.4'
+  s.version = '0.2.0'
   s.summary          = 'A Flutter plugin for reading and writing audio metadata.'
   s.description      = <<-DESC
 A Flutter plugin for reading and writing audio metadata, powered by Rust.
