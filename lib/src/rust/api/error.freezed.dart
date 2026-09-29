@@ -15,70 +15,25 @@ T _$identity<T>(T value) => value;
 
 /// @nodoc
 mixin _$FingerprintError {
-  String get message;
-
-  /// Create a copy of FingerprintError
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  @pragma('vm:prefer-inline')
-  $FingerprintErrorCopyWith<FingerprintError> get copyWith =>
-      _$FingerprintErrorCopyWithImpl<FingerprintError>(
-          this as FingerprintError, _$identity);
-
   @override
   bool operator ==(Object other) {
-    final _this = this as FingerprintError;
     return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is FingerprintError &&
-            (identical(other.message, _this.message) ||
-                other.message == _this.message));
+        (other.runtimeType == runtimeType && other is FingerprintError);
   }
 
   @override
-  int get hashCode {
-    final _this = this as FingerprintError;
-    return Object.hash(runtimeType, _this.message);
-  }
+  int get hashCode => runtimeType.hashCode;
 
   @override
   String toString() {
-    final _this = this as FingerprintError;
-    return 'FingerprintError(message: ${_this.message})';
+    return 'FingerprintError()';
   }
 }
 
 /// @nodoc
-abstract mixin class $FingerprintErrorCopyWith<$Res> {
-  factory $FingerprintErrorCopyWith(
-          FingerprintError value, $Res Function(FingerprintError) _then) =
-      _$FingerprintErrorCopyWithImpl;
-  @useResult
-  $Res call({String message});
-}
-
-/// @nodoc
-class _$FingerprintErrorCopyWithImpl<$Res>
-    implements $FingerprintErrorCopyWith<$Res> {
-  _$FingerprintErrorCopyWithImpl(this._self, this._then);
-
-  final FingerprintError _self;
-  final $Res Function(FingerprintError) _then;
-
-  /// Create a copy of FingerprintError
-  /// with the given fields replaced by the non-null parameter values.
-  @pragma('vm:prefer-inline')
-  @override
-  $Res call({
-    Object? message = null,
-  }) {
-    return _then(_self.copyWith(
-      message: null == message
-          ? _self.message
-          : message // ignore: cast_nullable_to_non_nullable
-              as String,
-    ));
-  }
+class $FingerprintErrorCopyWith<$Res> {
+  $FingerprintErrorCopyWith(
+      FingerprintError _, $Res Function(FingerprintError) __);
 }
 
 /// Adds pattern-matching-related methods to [FingerprintError].
@@ -101,6 +56,7 @@ extension FingerprintErrorPatterns on FingerprintError {
     TResult Function(FingerprintError_Decode value)? decode,
     TResult Function(FingerprintError_Unsupported value)? unsupported,
     TResult Function(FingerprintError_Fingerprint value)? fingerprint,
+    TResult Function(FingerprintError_Cancelled value)? cancelled,
     required TResult orElse(),
   }) {
     final _that = this;
@@ -113,6 +69,8 @@ extension FingerprintErrorPatterns on FingerprintError {
         return unsupported(_that);
       case FingerprintError_Fingerprint() when fingerprint != null:
         return fingerprint(_that);
+      case FingerprintError_Cancelled() when cancelled != null:
+        return cancelled(_that);
       case _:
         return orElse();
     }
@@ -137,6 +95,7 @@ extension FingerprintErrorPatterns on FingerprintError {
     required TResult Function(FingerprintError_Decode value) decode,
     required TResult Function(FingerprintError_Unsupported value) unsupported,
     required TResult Function(FingerprintError_Fingerprint value) fingerprint,
+    required TResult Function(FingerprintError_Cancelled value) cancelled,
   }) {
     final _that = this;
     switch (_that) {
@@ -148,6 +107,8 @@ extension FingerprintErrorPatterns on FingerprintError {
         return unsupported(_that);
       case FingerprintError_Fingerprint():
         return fingerprint(_that);
+      case FingerprintError_Cancelled():
+        return cancelled(_that);
     }
   }
 
@@ -169,6 +130,7 @@ extension FingerprintErrorPatterns on FingerprintError {
     TResult? Function(FingerprintError_Decode value)? decode,
     TResult? Function(FingerprintError_Unsupported value)? unsupported,
     TResult? Function(FingerprintError_Fingerprint value)? fingerprint,
+    TResult? Function(FingerprintError_Cancelled value)? cancelled,
   }) {
     final _that = this;
     switch (_that) {
@@ -180,6 +142,8 @@ extension FingerprintErrorPatterns on FingerprintError {
         return unsupported(_that);
       case FingerprintError_Fingerprint() when fingerprint != null:
         return fingerprint(_that);
+      case FingerprintError_Cancelled() when cancelled != null:
+        return cancelled(_that);
       case _:
         return null;
     }
@@ -203,6 +167,7 @@ extension FingerprintErrorPatterns on FingerprintError {
     TResult Function(String message)? decode,
     TResult Function(String message)? unsupported,
     TResult Function(String message)? fingerprint,
+    TResult Function()? cancelled,
     required TResult orElse(),
   }) {
     final _that = this;
@@ -215,6 +180,8 @@ extension FingerprintErrorPatterns on FingerprintError {
         return unsupported(_that.message);
       case FingerprintError_Fingerprint() when fingerprint != null:
         return fingerprint(_that.message);
+      case FingerprintError_Cancelled() when cancelled != null:
+        return cancelled();
       case _:
         return orElse();
     }
@@ -239,6 +206,7 @@ extension FingerprintErrorPatterns on FingerprintError {
     required TResult Function(String message) decode,
     required TResult Function(String message) unsupported,
     required TResult Function(String message) fingerprint,
+    required TResult Function() cancelled,
   }) {
     final _that = this;
     switch (_that) {
@@ -250,6 +218,8 @@ extension FingerprintErrorPatterns on FingerprintError {
         return unsupported(_that.message);
       case FingerprintError_Fingerprint():
         return fingerprint(_that.message);
+      case FingerprintError_Cancelled():
+        return cancelled();
     }
   }
 
@@ -271,6 +241,7 @@ extension FingerprintErrorPatterns on FingerprintError {
     TResult? Function(String message)? decode,
     TResult? Function(String message)? unsupported,
     TResult? Function(String message)? fingerprint,
+    TResult? Function()? cancelled,
   }) {
     final _that = this;
     switch (_that) {
@@ -282,6 +253,8 @@ extension FingerprintErrorPatterns on FingerprintError {
         return unsupported(_that.message);
       case FingerprintError_Fingerprint() when fingerprint != null:
         return fingerprint(_that.message);
+      case FingerprintError_Cancelled() when cancelled != null:
+        return cancelled();
       case _:
         return null;
     }
@@ -293,12 +266,10 @@ extension FingerprintErrorPatterns on FingerprintError {
 class FingerprintError_OpenFile extends FingerprintError {
   const FingerprintError_OpenFile({required this.message}) : super._();
 
-  @override
   final String message;
 
   /// Create a copy of FingerprintError
   /// with the given fields replaced by the non-null parameter values.
-  @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
   $FingerprintError_OpenFileCopyWith<FingerprintError_OpenFile> get copyWith =>
@@ -330,7 +301,6 @@ abstract mixin class $FingerprintError_OpenFileCopyWith<$Res>
   factory $FingerprintError_OpenFileCopyWith(FingerprintError_OpenFile value,
           $Res Function(FingerprintError_OpenFile) _then) =
       _$FingerprintError_OpenFileCopyWithImpl;
-  @override
   @useResult
   $Res call({String message});
 }
@@ -345,7 +315,6 @@ class _$FingerprintError_OpenFileCopyWithImpl<$Res>
 
   /// Create a copy of FingerprintError
   /// with the given fields replaced by the non-null parameter values.
-  @override
   @pragma('vm:prefer-inline')
   $Res call({
     Object? message = null,
@@ -364,12 +333,10 @@ class _$FingerprintError_OpenFileCopyWithImpl<$Res>
 class FingerprintError_Decode extends FingerprintError {
   const FingerprintError_Decode({required this.message}) : super._();
 
-  @override
   final String message;
 
   /// Create a copy of FingerprintError
   /// with the given fields replaced by the non-null parameter values.
-  @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
   $FingerprintError_DecodeCopyWith<FingerprintError_Decode> get copyWith =>
@@ -401,7 +368,6 @@ abstract mixin class $FingerprintError_DecodeCopyWith<$Res>
   factory $FingerprintError_DecodeCopyWith(FingerprintError_Decode value,
           $Res Function(FingerprintError_Decode) _then) =
       _$FingerprintError_DecodeCopyWithImpl;
-  @override
   @useResult
   $Res call({String message});
 }
@@ -416,7 +382,6 @@ class _$FingerprintError_DecodeCopyWithImpl<$Res>
 
   /// Create a copy of FingerprintError
   /// with the given fields replaced by the non-null parameter values.
-  @override
   @pragma('vm:prefer-inline')
   $Res call({
     Object? message = null,
@@ -435,12 +400,10 @@ class _$FingerprintError_DecodeCopyWithImpl<$Res>
 class FingerprintError_Unsupported extends FingerprintError {
   const FingerprintError_Unsupported({required this.message}) : super._();
 
-  @override
   final String message;
 
   /// Create a copy of FingerprintError
   /// with the given fields replaced by the non-null parameter values.
-  @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
   $FingerprintError_UnsupportedCopyWith<FingerprintError_Unsupported>
@@ -473,7 +436,6 @@ abstract mixin class $FingerprintError_UnsupportedCopyWith<$Res>
           FingerprintError_Unsupported value,
           $Res Function(FingerprintError_Unsupported) _then) =
       _$FingerprintError_UnsupportedCopyWithImpl;
-  @override
   @useResult
   $Res call({String message});
 }
@@ -488,7 +450,6 @@ class _$FingerprintError_UnsupportedCopyWithImpl<$Res>
 
   /// Create a copy of FingerprintError
   /// with the given fields replaced by the non-null parameter values.
-  @override
   @pragma('vm:prefer-inline')
   $Res call({
     Object? message = null,
@@ -507,12 +468,10 @@ class _$FingerprintError_UnsupportedCopyWithImpl<$Res>
 class FingerprintError_Fingerprint extends FingerprintError {
   const FingerprintError_Fingerprint({required this.message}) : super._();
 
-  @override
   final String message;
 
   /// Create a copy of FingerprintError
   /// with the given fields replaced by the non-null parameter values.
-  @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
   $FingerprintError_FingerprintCopyWith<FingerprintError_Fingerprint>
@@ -545,7 +504,6 @@ abstract mixin class $FingerprintError_FingerprintCopyWith<$Res>
           FingerprintError_Fingerprint value,
           $Res Function(FingerprintError_Fingerprint) _then) =
       _$FingerprintError_FingerprintCopyWithImpl;
-  @override
   @useResult
   $Res call({String message});
 }
@@ -560,7 +518,6 @@ class _$FingerprintError_FingerprintCopyWithImpl<$Res>
 
   /// Create a copy of FingerprintError
   /// with the given fields replaced by the non-null parameter values.
-  @override
   @pragma('vm:prefer-inline')
   $Res call({
     Object? message = null,
@@ -571,6 +528,27 @@ class _$FingerprintError_FingerprintCopyWithImpl<$Res>
           : message // ignore: cast_nullable_to_non_nullable
               as String,
     ));
+  }
+}
+
+/// @nodoc
+
+class FingerprintError_Cancelled extends FingerprintError {
+  const FingerprintError_Cancelled() : super._();
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is FingerprintError_Cancelled);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  String toString() {
+    return 'FingerprintError.cancelled()';
   }
 }
 

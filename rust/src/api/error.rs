@@ -11,6 +11,8 @@ pub enum FingerprintError {
     Unsupported { message: String },
     /// Fingerprint calculation or comparison failed.
     Fingerprint { message: String },
+    /// The operation was cancelled via [`cancellation_token_cancel`](super::fingerprint::cancellation_token_cancel).
+    Cancelled,
 }
 
 impl fmt::Display for FingerprintError {
@@ -20,6 +22,7 @@ impl fmt::Display for FingerprintError {
             Self::Decode { message } => write!(f, "Could not decode audio: {message}"),
             Self::Unsupported { message } => write!(f, "Unsupported audio format: {message}"),
             Self::Fingerprint { message } => write!(f, "Fingerprint error: {message}"),
+            Self::Cancelled => write!(f, "Fingerprint cancelled"),
         }
     }
 }

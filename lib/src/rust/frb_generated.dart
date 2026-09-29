@@ -69,7 +69,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 394269227;
+  int get rustContentHash => 834524564;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -81,10 +81,17 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 }
 
 abstract class RustLibApi extends BaseApi {
-  AudioFingerprint crateApiFingerprintFingerprint({required String path});
+  void crateApiFingerprintCancellationTokenCancel({required BigInt id});
 
-  AudioFingerprint crateApiFingerprintFingerprintFromBytes(
-      {required List<int> bytes});
+  void crateApiFingerprintCancellationTokenFree({required BigInt id});
+
+  BigInt crateApiFingerprintCancellationTokenNew();
+
+  Future<AudioFingerprint> crateApiFingerprintFingerprint(
+      {required String path, BigInt? cancelId});
+
+  Future<AudioFingerprint> crateApiFingerprintFingerprintFromBytes(
+      {required List<int> bytes, BigInt? cancelId});
 
   double crateApiFingerprintSimilarity(
       {required AudioFingerprint a, required AudioFingerprint b});
@@ -99,19 +106,93 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   });
 
   @override
-  AudioFingerprint crateApiFingerprintFingerprint({required String path}) {
+  void crateApiFingerprintCancellationTokenCancel({required BigInt id}) {
     return handler.executeSync(SyncTask(
       callFfi: () {
         final serializer = SseSerializer(generalizedFrbRustBinding);
-        sse_encode_String(path, serializer);
+        sse_encode_u_64(id, serializer);
         return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 1)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiFingerprintCancellationTokenCancelConstMeta,
+      argValues: [id],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiFingerprintCancellationTokenCancelConstMeta =>
+      const TaskConstMeta(
+        debugName: "cancellation_token_cancel",
+        argNames: ["id"],
+      );
+
+  @override
+  void crateApiFingerprintCancellationTokenFree({required BigInt id}) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_u_64(id, serializer);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 2)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiFingerprintCancellationTokenFreeConstMeta,
+      argValues: [id],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiFingerprintCancellationTokenFreeConstMeta =>
+      const TaskConstMeta(
+        debugName: "cancellation_token_free",
+        argNames: ["id"],
+      );
+
+  @override
+  BigInt crateApiFingerprintCancellationTokenNew() {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 3)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_u_64,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiFingerprintCancellationTokenNewConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiFingerprintCancellationTokenNewConstMeta =>
+      const TaskConstMeta(
+        debugName: "cancellation_token_new",
+        argNames: [],
+      );
+
+  @override
+  Future<AudioFingerprint> crateApiFingerprintFingerprint(
+      {required String path, BigInt? cancelId}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(path, serializer);
+        sse_encode_opt_box_autoadd_u_64(cancelId, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 4, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_audio_fingerprint,
         decodeErrorData: sse_decode_fingerprint_error,
       ),
       constMeta: kCrateApiFingerprintFingerprintConstMeta,
-      argValues: [path],
+      argValues: [path, cancelId],
       apiImpl: this,
     ));
   }
@@ -119,24 +200,26 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiFingerprintFingerprintConstMeta =>
       const TaskConstMeta(
         debugName: "fingerprint",
-        argNames: ["path"],
+        argNames: ["path", "cancelId"],
       );
 
   @override
-  AudioFingerprint crateApiFingerprintFingerprintFromBytes(
-      {required List<int> bytes}) {
-    return handler.executeSync(SyncTask(
-      callFfi: () {
+  Future<AudioFingerprint> crateApiFingerprintFingerprintFromBytes(
+      {required List<int> bytes, BigInt? cancelId}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_list_prim_u_8_loose(bytes, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 2)!;
+        sse_encode_opt_box_autoadd_u_64(cancelId, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 5, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_audio_fingerprint,
         decodeErrorData: sse_decode_fingerprint_error,
       ),
       constMeta: kCrateApiFingerprintFingerprintFromBytesConstMeta,
-      argValues: [bytes],
+      argValues: [bytes, cancelId],
       apiImpl: this,
     ));
   }
@@ -144,7 +227,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiFingerprintFingerprintFromBytesConstMeta =>
       const TaskConstMeta(
         debugName: "fingerprint_from_bytes",
-        argNames: ["bytes"],
+        argNames: ["bytes", "cancelId"],
       );
 
   @override
@@ -155,7 +238,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_box_autoadd_audio_fingerprint(a, serializer);
         sse_encode_box_autoadd_audio_fingerprint(b, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 3)!;
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 6)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_f_64,
@@ -198,6 +281,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  BigInt dco_decode_box_autoadd_u_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_u_64(raw);
+  }
+
+  @protected
   double dco_decode_f_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as double;
@@ -223,6 +312,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         return FingerprintError_Fingerprint(
           message: dco_decode_String(raw[1]),
         );
+      case 4:
+        return FingerprintError_Cancelled();
       default:
         throw Exception("unreachable");
     }
@@ -247,15 +338,33 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  BigInt? dco_decode_opt_box_autoadd_u_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_u_64(raw);
+  }
+
+  @protected
   int dco_decode_u_32(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as int;
   }
 
   @protected
+  BigInt dco_decode_u_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeU64(raw);
+  }
+
+  @protected
   int dco_decode_u_8(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as int;
+  }
+
+  @protected
+  void dco_decode_unit(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return;
   }
 
   @protected
@@ -278,6 +387,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_audio_fingerprint(deserializer));
+  }
+
+  @protected
+  BigInt sse_decode_box_autoadd_u_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_u_64(deserializer));
   }
 
   @protected
@@ -304,6 +419,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       case 3:
         var var_message = sse_decode_String(deserializer);
         return FingerprintError_Fingerprint(message: var_message);
+      case 4:
+        return FingerprintError_Cancelled();
       default:
         throw UnimplementedError('');
     }
@@ -331,15 +448,37 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  BigInt? sse_decode_opt_box_autoadd_u_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_u_64(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   int sse_decode_u_32(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getUint32();
   }
 
   @protected
+  BigInt sse_decode_u_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getBigUint64();
+  }
+
+  @protected
   int sse_decode_u_8(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getUint8();
+  }
+
+  @protected
+  void sse_decode_unit(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
   }
 
   @protected
@@ -376,6 +515,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_u_64(BigInt self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_64(self, serializer);
+  }
+
+  @protected
   void sse_encode_f_64(double self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putFloat64(self);
@@ -398,6 +543,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       case FingerprintError_Fingerprint(message: final message):
         sse_encode_i_32(3, serializer);
         sse_encode_String(message, serializer);
+      case FingerprintError_Cancelled():
+        sse_encode_i_32(4, serializer);
     }
   }
 
@@ -427,15 +574,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_u_64(BigInt? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_u_64(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_u_32(int self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putUint32(self);
   }
 
   @protected
+  void sse_encode_u_64(BigInt self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putBigUint64(self);
+  }
+
+  @protected
   void sse_encode_u_8(int self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putUint8(self);
+  }
+
+  @protected
+  void sse_encode_unit(void self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
   }
 
   @protected

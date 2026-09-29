@@ -1,11 +1,67 @@
 import 'dart:typed_data';
 
+import 'package:haudiotagger_interface/haudiotagger_interface.dart' as iface;
+
 import 'rust/frb_generated.dart';
 import 'rust/api/fingerprint.dart' as fp;
 import 'rust/api/fingerprint.dart' show AudioFingerprint;
 
 export 'rust/api/fingerprint.dart' show AudioFingerprint;
-export 'rust/api/error.dart' show FingerprintError;
+export 'rust/api/error.dart'
+    show
+        FingerprintError,
+        FingerprintError_OpenFile,
+        FingerprintError_Decode,
+        FingerprintError_Unsupported,
+        FingerprintError_Fingerprint,
+        FingerprintError_Cancelled;
+
+/// Cooperative cancellation handle for long fingerprint scans.
+///
+/// Create one token per scan, pass it to [HaudioFingerprint.fingerprint] or
+/// [HaudioFingerprint.fingerprintFromBytes], and call [cancel] when the work
+/// is no longer needed (e.g. the user changed track). In-flight Rust work
+/// observing the trip aborts with `FingerprintError.cancelled`.
+///
+/// ```dart
+/// final token = await CancellationToken.create();
+/// final future = HaudioFingerprint.fingerprintFromBytes(bytes,
+///     cancellationToken: token);
+/// await token.cancel(); // abandon the scan
+/// ```
+class CancellationToken implements iface.CancellationToken {
+  final BigInt _id;
+  bool _disposed = false;
+
+  CancellationToken._(this._id);
+
+  /// Engine handle backing this token. Provider-side use only: the backend
+  /// reads it when this token crosses the `haudiotagger_interface` contract.
+  BigInt get id => _id;
+
+  /// Create a token. One token per scan; [dispose] it when done.
+  static Future<CancellationToken> create() async {
+    await HaudioFingerprint._ensureInit();
+    return CancellationToken._(fp.cancellationTokenNew());
+  }
+
+  /// Trip the token. In-flight work aborts with `FingerprintError.cancelled`.
+  /// Safe to call multiple times or after [dispose].
+  @override
+  Future<void> cancel() async {
+    await HaudioFingerprint._ensureInit();
+    if (_disposed) return;
+    fp.cancellationTokenCancel(id: _id);
+  }
+
+  /// Release the token id. Safe to call multiple times.
+  Future<void> dispose() async {
+    await HaudioFingerprint._ensureInit();
+    if (_disposed) return;
+    _disposed = true;
+    fp.cancellationTokenFree(id: _id);
+  }
+}
 
 /// Perceptual audio fingerprinting.
 ///
@@ -26,15 +82,23 @@ class HaudioFingerprint {
   ///
   /// Decodes the full stream, so tags, filenames, and containers do not
   /// affect the result. Supports MP3, FLAC, Ogg Vorbis, WAV, AIFF, M4A/AAC.
-  static Future<AudioFingerprint> fingerprint(String path) async {
+  ///
+  /// Runs off the calling thread (native) or cooperatively (web). Pass a
+  /// [cancellationToken] to abort long scans.
+  static Future<AudioFingerprint> fingerprint(String path,
+      {CancellationToken? cancellationToken}) async {
     await _ensureInit();
-    return fp.fingerprint(path: path);
+    return fp.fingerprint(path: path, cancelId: cancellationToken?._id);
   }
 
   /// Fingerprint in-memory audio `bytes` (for web/WASM).
-  static Future<AudioFingerprint> fingerprintFromBytes(Uint8List bytes) async {
+  ///
+  /// Pass a [cancellationToken] to abort long scans.
+  static Future<AudioFingerprint> fingerprintFromBytes(Uint8List bytes,
+      {CancellationToken? cancellationToken}) async {
     await _ensureInit();
-    return fp.fingerprintFromBytes(bytes: bytes);
+    return fp.fingerprintFromBytes(
+        bytes: bytes, cancelId: cancellationToken?._id);
   }
 
   /// Compare two fingerprints: `1.0` is (near-)identical audio, `0.0` is

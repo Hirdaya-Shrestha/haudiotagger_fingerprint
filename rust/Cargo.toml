@@ -1,6 +1,6 @@
 [package]
 name = "haudiotagger_fingerprint"
-version = "0.1.4"
+version = "0.2.0"
 edition = "2024"
 
 [lib]
@@ -21,6 +21,12 @@ flutter_rust_bridge = "=2.13.0"
 symphonia = { version = "0.6", features = ["mp3", "aac", "alac", "isomp4", "aiff"] }
 # Pure-Rust Chromaprint port (deps: rubato + rustfft only, WASM-safe).
 rusty-chromaprint = "0.3"
+# `rt` only: yield_now needs no runtime context and compiles on wasm32
+# (rt-multi-thread does not). Test-only extras live in dev-dependencies.
+tokio = { version = "1", features = ["rt"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt", "time", "macros"] }
 
 [profile.release]
 lto = true
