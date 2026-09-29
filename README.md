@@ -21,6 +21,8 @@
 </p>
 
 <p align="center">
+  <a href="https://haudiotagger.hirdaya-shrestha.com.np/docs/fingerprint"><strong>Documentation</strong></a>
+  ·
   <a href="https://github.com/Hirdaya-Shrestha/haudiotagger_fingerprint"><strong>GitHub</strong></a>
   ·
   <a href="https://pub.dev/packages/haudiotagger_fingerprint"><strong>pub.dev</strong></a>
@@ -197,6 +199,15 @@ await token.dispose();
 The Web implementation decodes and fingerprints fully in-browser via
 WebAssembly. Large files are CPU-heavy; prefer short clips or native
 for bulk library scans.
+
+---
+
+## Documentation
+
+- [Fingerprint Guide](https://haudiotagger.hirdaya-shrestha.com.np/docs/fingerprint)
+- [API Reference](https://pub.dev/documentation/haudiotagger_fingerprint/latest/)
+
+**→ [Read the full documentation](https://haudiotagger.hirdaya-shrestha.com.np/docs)**
 
 ---
 
