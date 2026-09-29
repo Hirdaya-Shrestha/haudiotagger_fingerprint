@@ -10,8 +10,8 @@ let package = Package(
     targets: [
         .binaryTarget(
             name: "haudiotagger_fingerprintFFI",
-            url: "https://github.com/Hirdaya-Shrestha/haudiotagger_fingerprint/releases/download/v0.2.0/ios.zip",
-            checksum: "c93d6146571a6dcdf443450e3ba18b542797bcdcf5814e18ea3a275968b12d73"
+            url: "https://github.com/Hirdaya-Shrestha/haudiotagger_fingerprint/releases/download/v0.3.0/ios.zip",
+            checksum: "130c1e07a1257df79074f726dc86a4d4a52cad5e1efa90e69f5c3ceb4d5d3ede"
         ),
         .target(
             name: "haudiotagger_fingerprint",
