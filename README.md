@@ -17,6 +17,7 @@
   <a href="https://github.com/Hirdaya-Shrestha/haudiotagger_fingerprint/actions"><img src="https://github.com/Hirdaya-Shrestha/haudiotagger_fingerprint/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-4285F4.svg" alt="MIT License"></a>
   <a href="https://pub.dev/packages/haudiotagger_fingerprint"><img src="https://img.shields.io/pub/dm/haudiotagger_fingerprint?label=Downloads&logo=dart" alt="Downloads"></a>
+  <a href="https://haudiotagger.hirdaya-shrestha.com.np/"><img src="https://img.shields.io/badge/Web-Demo-448cf3" alt="Live Demo"></a>
 </p>
 
 <p align="center">
@@ -48,6 +49,23 @@ can be compared by content instead of by name.
 - 🌍 Android, iOS, Linux, macOS, Windows & Web
 - 🦀 100% pure Rust — no C dependencies, builds everywhere including WASM
 - 📦 Separate lightweight package — zero cost unless you depend on it
+
+---
+
+## Live Demo
+
+Try fingerprinting directly in your browser, integrated in the hAudiotagger demo app.
+
+**No installation. No server-side processing. Everything runs locally in your browser.**
+
+<p>
+  <a href="https://haudiotagger.hirdaya-shrestha.com.np/">
+    <img src="https://img.shields.io/badge/▶_Try_the_Live_Demo-448cf3?style=for-the-badge" alt="Try Live Demo">
+  </a>
+</p>
+
+> [!NOTE]
+> Web applications should use the `*FromBytes` APIs such as `fingerprintFromBytes`.
 
 ---
 
