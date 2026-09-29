@@ -67,8 +67,10 @@ jobs:
           sed -i "s/^set(Version .*/set(Version \"${VERSION}\")/" \
             windows/CMakeLists.txt
 
-          # README.md
-          sed -i "s/haudiotagger_fingerprint: \^${OLD_VERSION}/haudiotagger_fingerprint: ^${VERSION}/" \
+          # README.md — install snippet. Anchored on any x.y.z (not on
+          # OLD_VERSION) so it self-heals even if README and pubspec ever
+          # drift out of sync before tagging.
+          sed -i -E "s/^(  haudiotagger_fingerprint: \^)[0-9]+\.[0-9]+\.[0-9]+/\1${VERSION}/" \
             README.md
 
           sed -i "s/hAudiotagger ${OLD_VERSION}/hAudiotagger ${VERSION}/" \
