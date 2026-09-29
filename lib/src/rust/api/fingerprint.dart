@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 import 'error.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `decode_to_pcm`, `fingerprint_pcm`
+// These functions are ignored because they are not marked as `pub`: `cancel_flag`, `decode_to_pcm`, `fingerprint_inner`, `fingerprint_pcm`, `is_cancelled`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
 
 /// Compute the fingerprint of the audio file at `path`.
@@ -16,15 +16,23 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 /// M4A/AAC/ALAC) and fingerprints the PCM content. Tags, filenames, and
 /// container differences do not affect the result.
 ///
-/// `sync` (not pooled): FRB would otherwise run this on its web worker pool,
-/// whose bootstrap hardcodes the `wasm_bindgen` JS global — unusable when
-/// two FRB plugins share a page. Sync execution needs no pool, no workers.
-AudioFingerprint fingerprint({required String path}) =>
-    RustLib.instance.api.crateApiFingerprintFingerprint(path: path);
+/// Async without touching FRB's worker pool (whose web bootstrap hardcodes
+/// the `wasm_bindgen` JS global): native runs on tokio background threads,
+/// web cooperatively yields between decode chunks on the main thread.
+/// Pass `cancel_id` from [`cancellation_token_new`] to abort long scans.
+Future<AudioFingerprint> fingerprint(
+        {required String path, BigInt? cancelId}) =>
+    RustLib.instance.api
+        .crateApiFingerprintFingerprint(path: path, cancelId: cancelId);
 
 /// Compute the fingerprint of in-memory audio `bytes` (for web/WASM).
-AudioFingerprint fingerprintFromBytes({required List<int> bytes}) =>
-    RustLib.instance.api.crateApiFingerprintFingerprintFromBytes(bytes: bytes);
+///
+/// Async, same execution model as [`fingerprint`]. Pass `cancel_id` from
+/// [`cancellation_token_new`] to abort long scans.
+Future<AudioFingerprint> fingerprintFromBytes(
+        {required List<int> bytes, BigInt? cancelId}) =>
+    RustLib.instance.api.crateApiFingerprintFingerprintFromBytes(
+        bytes: bytes, cancelId: cancelId);
 
 /// Compare two fingerprints, returning a similarity score from `0.0` to `1.0`.
 ///
@@ -33,6 +41,20 @@ AudioFingerprint fingerprintFromBytes({required List<int> bytes}) =>
 /// unrelated audio scores near `0.0`.
 double similarity({required AudioFingerprint a, required AudioFingerprint b}) =>
     RustLib.instance.api.crateApiFingerprintSimilarity(a: a, b: b);
+
+/// Create a cancellation token, returned as an id for Dart's
+/// `CancellationToken`. Pass it as `cancel_id` to abort long scans.
+BigInt cancellationTokenNew() =>
+    RustLib.instance.api.crateApiFingerprintCancellationTokenNew();
+
+/// Trip a token created by [`cancellation_token_new`]. In-flight fingerprint
+/// calls observing it abort with [`FingerprintError::Cancelled`]. Idempotent.
+void cancellationTokenCancel({required BigInt id}) =>
+    RustLib.instance.api.crateApiFingerprintCancellationTokenCancel(id: id);
+
+/// Release a token id. Ids are reusable resources owned by the caller:
+void cancellationTokenFree({required BigInt id}) =>
+    RustLib.instance.api.crateApiFingerprintCancellationTokenFree(id: id);
 
 /// A perceptual audio fingerprint.
 ///

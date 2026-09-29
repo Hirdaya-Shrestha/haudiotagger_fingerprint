@@ -61,4 +61,35 @@ void main() {
       expect(await original.similarityTo(copy), 1.0);
     });
   });
+
+  group('cancellation', () {
+    test('pre-cancelled token aborts with cancelled error', () async {
+      final token = await CancellationToken.create();
+      await token.cancel();
+      expect(
+        HaudioFingerprint.fingerprintFromBytes(fixture('chirp.mp3'),
+            cancellationToken: token),
+        throwsA(isA<FingerprintError_Cancelled>()),
+      );
+      await token.dispose();
+    });
+
+    test('unused token changes nothing', () async {
+      final token = await CancellationToken.create();
+      final fp = await HaudioFingerprint.fingerprintFromBytes(
+          fixture('chirp.mp3'),
+          cancellationToken: token);
+      expect(fp.values, isNotEmpty);
+      await token.dispose();
+    });
+
+    test('double cancel and dispose are safe', () async {
+      final token = await CancellationToken.create();
+      await token.cancel();
+      await token.cancel();
+      await token.dispose();
+      await token.dispose();
+      await token.cancel();
+    });
+  });
 }

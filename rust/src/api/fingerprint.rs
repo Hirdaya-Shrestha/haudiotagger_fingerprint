@@ -1,4 +1,9 @@
+use std::collections::HashMap;
 use std::io::Cursor;
+use std::sync::{
+    Arc, Mutex,
+    atomic::{AtomicBool, AtomicU64, Ordering},
+};
 
 use flutter_rust_bridge::frb;
 use rusty_chromaprint::{Configuration, Fingerprinter, match_fingerprints};
@@ -31,23 +36,45 @@ pub struct AudioFingerprint {
 /// M4A/AAC/ALAC) and fingerprints the PCM content. Tags, filenames, and
 /// container differences do not affect the result.
 ///
-/// `sync` (not pooled): FRB would otherwise run this on its web worker pool,
-/// whose bootstrap hardcodes the `wasm_bindgen` JS global — unusable when
-/// two FRB plugins share a page. Sync execution needs no pool, no workers.
-// ponytail: sync keeps web worker-free; revisit if compute ever needs threads.
-#[frb(sync)]
-pub fn fingerprint(path: String) -> Result<AudioFingerprint, FingerprintError> {
+/// Async without touching FRB's worker pool (whose web bootstrap hardcodes
+/// the `wasm_bindgen` JS global): native runs on tokio background threads,
+/// web cooperatively yields between decode chunks on the main thread.
+/// Pass `cancel_id` from [`cancellation_token_new`] to abort long scans.
+pub async fn fingerprint(
+    path: String,
+    cancel_id: Option<u64>,
+) -> Result<AudioFingerprint, FingerprintError> {
     let bytes = std::fs::read(&path).map_err(|e| FingerprintError::OpenFile {
         message: format!("Could not read file: {e}"),
     })?;
-    fingerprint_from_bytes(bytes)
+    fingerprint_inner(bytes, cancel_id).await
 }
 
 /// Compute the fingerprint of in-memory audio `bytes` (for web/WASM).
-// ponytail: sync, same worker-pool reason as `fingerprint`.
-#[frb(sync)]
-pub fn fingerprint_from_bytes(bytes: Vec<u8>) -> Result<AudioFingerprint, FingerprintError> {
-    let (samples, sample_rate, channels) = decode_to_pcm(&bytes)?;
+///
+/// Async, same execution model as [`fingerprint`]. Pass `cancel_id` from
+/// [`cancellation_token_new`] to abort long scans.
+pub async fn fingerprint_from_bytes(
+    bytes: Vec<u8>,
+    cancel_id: Option<u64>,
+) -> Result<AudioFingerprint, FingerprintError> {
+    fingerprint_inner(bytes, cancel_id).await
+}
+
+async fn fingerprint_inner(
+    bytes: Vec<u8>,
+    cancel_id: Option<u64>,
+) -> Result<AudioFingerprint, FingerprintError> {
+    let flag = cancel_flag(cancel_id);
+    if is_cancelled(&flag) {
+        return Err(FingerprintError::Cancelled);
+    }
+    let (samples, sample_rate, channels) = decode_to_pcm(&bytes, &flag).await?;
+    if is_cancelled(&flag) {
+        return Err(FingerprintError::Cancelled);
+    }
+    // ponytail: sync stretch — the printer is !Send, so it must never be
+    // alive across an await. Decode yields happen above, none in here.
     let (values, duration_secs) = fingerprint_pcm(&samples, sample_rate, channels)?;
     Ok(AudioFingerprint {
         values,
@@ -82,9 +109,64 @@ pub fn similarity(a: AudioFingerprint, b: AudioFingerprint) -> Result<f64, Finge
     Ok((best / denom).clamp(0.0, 1.0))
 }
 
+// ── Cancellation ──────────────────────────────────────────────────────────
+//
+// Cooperative, handle-based: ids are cheap `u64`s (no opaque-type plumbing
+// through FRB), flags live in one process-global map. `cancel`/`free` on
+// unknown ids are harmless no-ops, so double-cancel and use-after-free
+// cannot fail. Ids are reusable resources owned by the caller: create one
+// token per scan, `free` it when done; a tripped flag stays tripped.
+
+static NEXT_CANCEL_ID: AtomicU64 = AtomicU64::new(1);
+static CANCEL_FLAGS: std::sync::LazyLock<Mutex<HashMap<u64, Arc<AtomicBool>>>> =
+    std::sync::LazyLock::new(|| Mutex::new(HashMap::new()));
+
+fn cancel_flag(id: Option<u64>) -> Option<Arc<AtomicBool>> {
+    id.and_then(|id| CANCEL_FLAGS.lock().unwrap().get(&id).cloned())
+}
+
+fn is_cancelled(flag: &Option<Arc<AtomicBool>>) -> bool {
+    flag.as_ref().is_some_and(|f| f.load(Ordering::Relaxed))
+}
+
+/// Create a cancellation token, returned as an id for Dart's
+/// `CancellationToken`. Pass it as `cancel_id` to abort long scans.
+#[frb(sync)]
+pub fn cancellation_token_new() -> u64 {
+    let id = NEXT_CANCEL_ID.fetch_add(1, Ordering::Relaxed);
+    CANCEL_FLAGS
+        .lock()
+        .unwrap()
+        .insert(id, Arc::new(AtomicBool::new(false)));
+    id
+}
+
+/// Trip a token created by [`cancellation_token_new`]. In-flight fingerprint
+/// calls observing it abort with [`FingerprintError::Cancelled`]. Idempotent.
+#[frb(sync)]
+pub fn cancellation_token_cancel(id: u64) {
+    if let Some(flag) = CANCEL_FLAGS.lock().unwrap().get(&id) {
+        flag.store(true, Ordering::Relaxed);
+    }
+}
+
+/// Release a token id. Ids are reusable resources owned by the caller:
+// ponytail: no auto-drop on purpose — dropping would silently break token
+// reuse across scans. Documented dispose pattern instead. Idempotent.
+#[frb(sync)]
+pub fn cancellation_token_free(id: u64) {
+    CANCEL_FLAGS.lock().unwrap().remove(&id);
+}
+
 /// Decode any supported container to interleaved `i16` PCM.
 /// Returns `(samples, sample_rate, channels)`.
-fn decode_to_pcm(bytes: &[u8]) -> Result<(Vec<i16>, u32, u32), FingerprintError> {
+///
+/// Yields roughly every second of audio so event loops (notably the web main
+/// thread, where this runs cooperatively) stay responsive during long files.
+async fn decode_to_pcm(
+    bytes: &[u8],
+    flag: &Option<Arc<AtomicBool>>,
+) -> Result<(Vec<i16>, u32, u32), FingerprintError> {
     let cursor = Cursor::new(bytes);
     let mss = MediaSourceStream::new(Box::new(cursor), Default::default());
     // ponytail: no extension hint — symphonia sniffs the container from content,
@@ -125,7 +207,14 @@ fn decode_to_pcm(bytes: &[u8]) -> Result<(Vec<i16>, u32, u32), FingerprintError>
     let mut samples: Vec<i16> = Vec::new();
     let mut interleaved: Vec<i16> = Vec::new();
     let (mut sample_rate, mut channels) = (0u32, 0u32);
+    // ponytail: one Relaxed load per packet is ~free; the yield keeps long
+    // decodes from monopolizing cooperative executors (web main thread).
+    const YIELD_EVERY_SAMPLES: usize = 88200; // ~1s of stereo 44.1kHz
+    let mut since_yield = 0usize;
     loop {
+        if is_cancelled(flag) {
+            return Err(FingerprintError::Cancelled);
+        }
         let packet = match format.next_packet() {
             Ok(Some(packet)) => packet,
             // End of stream.
@@ -148,6 +237,14 @@ fn decode_to_pcm(bytes: &[u8]) -> Result<(Vec<i16>, u32, u32), FingerprintError>
                 interleaved.resize(decoded.samples_interleaved(), 0);
                 decoded.copy_to_slice_interleaved::<i16, _>(&mut interleaved);
                 samples.extend_from_slice(&interleaved);
+                since_yield += interleaved.len();
+                if since_yield >= YIELD_EVERY_SAMPLES {
+                    since_yield = 0;
+                    tokio::task::yield_now().await;
+                    if is_cancelled(flag) {
+                        return Err(FingerprintError::Cancelled);
+                    }
+                }
             }
             // Skip corrupt frames; the packet cursor already advanced.
             Err(SymphoniaError::DecodeError(_)) | Err(SymphoniaError::IoError(_)) => continue,
@@ -231,37 +328,104 @@ mod tests {
         data
     }
 
-    #[test]
-    fn fingerprint_is_deterministic() {
-        let a = fingerprint_from_bytes(wav_bytes(440.0, 880.0, 5, 44100)).unwrap();
-        let b = fingerprint_from_bytes(wav_bytes(440.0, 880.0, 5, 44100)).unwrap();
+    #[tokio::test]
+    async fn fingerprint_is_deterministic() {
+        let a = fingerprint_from_bytes(wav_bytes(440.0, 880.0, 5, 44100), None)
+            .await
+            .unwrap();
+        let b = fingerprint_from_bytes(wav_bytes(440.0, 880.0, 5, 44100), None)
+            .await
+            .unwrap();
         assert_eq!(a.values, b.values);
         assert_eq!(a.duration_secs, 5);
     }
 
-    #[test]
-    fn different_audio_gives_different_fingerprint() {
-        let a = fingerprint_from_bytes(wav_bytes(440.0, 880.0, 5, 44100)).unwrap();
-        let b = fingerprint_from_bytes(wav_bytes(440.0, 660.0, 5, 44100)).unwrap();
+    #[tokio::test]
+    async fn different_audio_gives_different_fingerprint() {
+        let a = fingerprint_from_bytes(wav_bytes(440.0, 880.0, 5, 44100), None)
+            .await
+            .unwrap();
+        let b = fingerprint_from_bytes(wav_bytes(440.0, 660.0, 5, 44100), None)
+            .await
+            .unwrap();
         assert_ne!(a.values, b.values);
     }
 
-    #[test]
-    fn identical_audio_scores_one() {
-        let a = fingerprint_from_bytes(wav_bytes(440.0, 880.0, 5, 44100)).unwrap();
-        let b = fingerprint_from_bytes(wav_bytes(440.0, 880.0, 5, 44100)).unwrap();
+    #[tokio::test]
+    async fn identical_audio_scores_one() {
+        let a = fingerprint_from_bytes(wav_bytes(440.0, 880.0, 5, 44100), None)
+            .await
+            .unwrap();
+        let b = fingerprint_from_bytes(wav_bytes(440.0, 880.0, 5, 44100), None)
+            .await
+            .unwrap();
         assert_eq!(similarity(a, b).unwrap(), 1.0);
     }
 
-    #[test]
-    fn unrelated_audio_scores_low() {
-        let a = fingerprint_from_bytes(wav_bytes(440.0, 880.0, 5, 44100)).unwrap();
-        let b = fingerprint_from_bytes(wav_bytes(200.0, 300.0, 5, 44100)).unwrap();
+    #[tokio::test]
+    async fn unrelated_audio_scores_low() {
+        let a = fingerprint_from_bytes(wav_bytes(440.0, 880.0, 5, 44100), None)
+            .await
+            .unwrap();
+        let b = fingerprint_from_bytes(wav_bytes(200.0, 300.0, 5, 44100), None)
+            .await
+            .unwrap();
         assert!(similarity(a, b).unwrap() < 0.5);
     }
 
+    #[tokio::test]
+    async fn garbage_bytes_are_rejected() {
+        assert!(
+            fingerprint_from_bytes(b"not audio at all".to_vec(), None)
+                .await
+                .is_err()
+        );
+    }
+
     #[test]
-    fn garbage_bytes_are_rejected() {
-        assert!(fingerprint_from_bytes(b"not audio at all".to_vec()).is_err());
+    fn token_ids_are_unique_and_hygienic() {
+        let a = cancellation_token_new();
+        let b = cancellation_token_new();
+        assert_ne!(a, b);
+        // Unknown ids are harmless no-ops, never panics.
+        cancellation_token_cancel(u64::MAX);
+        cancellation_token_free(u64::MAX);
+        cancellation_token_free(a);
+        cancellation_token_free(b);
+    }
+
+    #[tokio::test]
+    async fn pre_cancelled_token_aborts() {
+        let id = cancellation_token_new();
+        cancellation_token_cancel(id);
+        let err = fingerprint_from_bytes(wav_bytes(440.0, 880.0, 5, 44100), Some(id))
+            .await
+            .unwrap_err();
+        assert!(matches!(err, FingerprintError::Cancelled));
+        cancellation_token_free(id);
+    }
+
+    #[tokio::test]
+    async fn cancel_during_long_decode_aborts() {
+        // 240s of audio: decode takes well over a second, so a canceller
+        // firing after 50ms virtually always lands mid-flight. Retry a few
+        // times; if decode ever wins the race outright, that attempt just
+        // doesn't prove anything.
+        let bytes = wav_bytes(440.0, 880.0, 240, 44100);
+        for _ in 0..5 {
+            let id = cancellation_token_new();
+            let bytes = bytes.clone();
+            let canceller = tokio::spawn(async move {
+                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+                cancellation_token_cancel(id);
+            });
+            let result = fingerprint_from_bytes(bytes, Some(id)).await;
+            let _ = canceller.await;
+            cancellation_token_free(id);
+            if matches!(result, Err(FingerprintError::Cancelled)) {
+                return;
+            }
+        }
+        panic!("cancellation never landed mid-decode");
     }
 }

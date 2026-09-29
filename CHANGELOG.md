@@ -1,3 +1,15 @@
+## 0.2.0
+
+### Features
+
+- Cooperative cancellation for long scans: `CancellationToken.create()` / `cancel()` / `dispose()`, passable to `fingerprint` and `fingerprintFromBytes`; tripped tokens abort with `FingerprintError.cancelled`. One token per scan; cancel/dispose are idempotent
+- Non-blocking execution: fingerprint calls are now truly async — background threads on native, cooperative yields between decode chunks on web. Public Dart signatures unchanged (still `Future`-based)
+
+### Platform Notes
+
+- On web the calls share the main thread cooperatively (yields ~every second of audio); for bulk scans prefer short clips or native. No extra setup needed — no worker pool involved
+- `similarity` stays synchronous: it compares small in-memory vectors in microseconds, no token needed
+
 ## 0.1.4
 
 ### Bug Fixes

@@ -119,6 +119,25 @@ you to add it. Requires `haudiotagger ^2.2.0`.
 Group files with `similarity >= 0.8` as the same recording, then use each
 file's metadata (title/artist/duration) to pick which copy to keep.
 
+### Cancelling long scans
+
+Fingerprinting never blocks your UI: native runs on background threads, web
+yields cooperatively between decode chunks. For library scans, create one
+token per file and cancel when the work goes stale (e.g. the user changed
+track). Abandoned calls abort with `FingerprintError.cancelled`; also drop
+their results via a generation counter, since an already-finished call can't
+be un-computed.
+
+```dart
+final token = await CancellationToken.create();
+final future = HaudioFingerprint.fingerprintFromBytes(bytes,
+    cancellationToken: token);
+
+// Later, when the user moves on:
+await token.cancel();
+await token.dispose();
+```
+
 ---
 
 ## Score interpretation

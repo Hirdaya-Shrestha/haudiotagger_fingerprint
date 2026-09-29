@@ -33,4 +33,7 @@ sealed class FingerprintError with _$FingerprintError implements FrbException {
   const factory FingerprintError.fingerprint({
     required String message,
   }) = FingerprintError_Fingerprint;
+
+  /// The operation was cancelled via [`cancellation_token_cancel`](super::fingerprint::cancellation_token_cancel).
+  const factory FingerprintError.cancelled() = FingerprintError_Cancelled;
 }
