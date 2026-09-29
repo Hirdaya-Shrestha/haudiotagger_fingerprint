@@ -2,19 +2,13 @@ import 'dart:typed_data';
 
 import 'package:haudiotagger_interface/haudiotagger_interface.dart' as iface;
 
-import 'fingerprint.dart' show CancellationToken, HaudioFingerprint;
-import 'rust/api/fingerprint.dart' as frb;
+import 'fingerprint.dart'
+    show AudioFingerprint, CancellationToken, HaudioFingerprint;
 
 /// [iface.FingerprintBackend] implementation backed by this package's Rust
 /// engine. Installed automatically — see [HaudioFingerprintBackend].
 class FingerprintBackendImpl implements iface.FingerprintBackend {
   const FingerprintBackendImpl();
-
-  static iface.AudioFingerprint _convert(frb.AudioFingerprint fp) =>
-      iface.AudioFingerprint(values: fp.values, durationSecs: fp.durationSecs);
-
-  static frb.AudioFingerprint _convertBack(iface.AudioFingerprint fp) =>
-      frb.AudioFingerprint(values: fp.values, durationSecs: fp.durationSecs);
 
   /// Resolve a contract token to this engine's handle. Only tokens from
   /// [CancellationToken.create] carry one; anything else would silently run
@@ -27,21 +21,24 @@ class FingerprintBackendImpl implements iface.FingerprintBackend {
   }
 
   @override
-  Future<iface.AudioFingerprint> fingerprint(String path,
-          {iface.CancellationToken? cancellationToken}) async =>
-      _convert(await HaudioFingerprint.fingerprint(path,
-          cancellationToken: _resolve(cancellationToken)));
+  Future<AudioFingerprint> fingerprint(String path,
+      {iface.CancellationToken? cancellationToken}) async {
+    final token = _resolve(cancellationToken);
+    return HaudioFingerprint.fingerprint(path, cancellationToken: token);
+  }
 
   @override
-  Future<iface.AudioFingerprint> fingerprintFromBytes(Uint8List bytes,
-          {iface.CancellationToken? cancellationToken}) async =>
-      _convert(await HaudioFingerprint.fingerprintFromBytes(bytes,
-          cancellationToken: _resolve(cancellationToken)));
+  Future<AudioFingerprint> fingerprintFromBytes(Uint8List bytes,
+      {iface.CancellationToken? cancellationToken}) async {
+    final token = _resolve(cancellationToken);
+    return HaudioFingerprint.fingerprintFromBytes(bytes,
+        cancellationToken: token);
+  }
 
   @override
-  Future<double> similarity(
-          iface.AudioFingerprint a, iface.AudioFingerprint b) =>
-      HaudioFingerprint.similarity(_convertBack(a), _convertBack(b));
+  Future<double> similarity(AudioFingerprint a, AudioFingerprint b) async {
+    return HaudioFingerprint.similarity(a, b);
+  }
 }
 
 /// Self-registration: the generated plugin registrant calls [registerWith]

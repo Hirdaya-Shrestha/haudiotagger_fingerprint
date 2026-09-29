@@ -1,12 +1,14 @@
 import 'dart:typed_data';
 
+import 'package:haudiotagger_interface/haudiotagger_interface.dart'
+    show AudioFingerprint;
 import 'package:haudiotagger_interface/haudiotagger_interface.dart' as iface;
 
 import 'rust/frb_generated.dart';
 import 'rust/api/fingerprint.dart' as fp;
-import 'rust/api/fingerprint.dart' show AudioFingerprint;
 
-export 'rust/api/fingerprint.dart' show AudioFingerprint;
+export 'package:haudiotagger_interface/haudiotagger_interface.dart'
+    show AudioFingerprint;
 export 'rust/api/error.dart'
     show
         FingerprintError,
@@ -88,7 +90,9 @@ class HaudioFingerprint {
   static Future<AudioFingerprint> fingerprint(String path,
       {CancellationToken? cancellationToken}) async {
     await _ensureInit();
-    return fp.fingerprint(path: path, cancelId: cancellationToken?._id);
+    final raw =
+        await fp.fingerprint(path: path, cancelId: cancellationToken?._id);
+    return AudioFingerprint(values: raw.values, durationSecs: raw.durationSecs);
   }
 
   /// Fingerprint in-memory audio `bytes` (for web/WASM).
@@ -97,8 +101,9 @@ class HaudioFingerprint {
   static Future<AudioFingerprint> fingerprintFromBytes(Uint8List bytes,
       {CancellationToken? cancellationToken}) async {
     await _ensureInit();
-    return fp.fingerprintFromBytes(
+    final raw = await fp.fingerprintFromBytes(
         bytes: bytes, cancelId: cancellationToken?._id);
+    return AudioFingerprint(values: raw.values, durationSecs: raw.durationSecs);
   }
 
   /// Compare two fingerprints: `1.0` is (near-)identical audio, `0.0` is
@@ -106,7 +111,9 @@ class HaudioFingerprint {
   static Future<double> similarity(
       AudioFingerprint a, AudioFingerprint b) async {
     await _ensureInit();
-    return fp.similarity(a: a, b: b);
+    return fp.similarity(
+        a: fp.AudioFingerprint(values: a.values, durationSecs: a.durationSecs),
+        b: fp.AudioFingerprint(values: b.values, durationSecs: b.durationSecs));
   }
 }
 

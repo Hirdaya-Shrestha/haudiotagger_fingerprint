@@ -1,3 +1,9 @@
+## 0.3.0
+
+### Bug Fixes
+
+- **Breaking:** the public `AudioFingerprint` type is now the shared DTO from `haudiotagger_interface` (converted internally) instead of the FRB-generated twin, so importing `haudiotagger` and `haudiotagger_fingerprint` together no longer collides with `ambiguous_import`. No behavior change; re-run `flutter pub get`, no code changes needed unless you referenced the FRB type directly
+
 ## 0.2.0
 
 ### Features
