@@ -1,3 +1,9 @@
+## 0.3.2
+
+### Bug Fixes
+
+- Fixed native crashes (`capacity overflow` in `Vec::with_capacity`) when the Dart bindings and the native library disagree on the wire format, e.g. a stale prebuilt `.so` after upgrading: the SSE decoder trusted a length prefix that could reinterpret to ~2⁶⁴ bytes. Dart now verifies a native API version on init and fails with a clear "run flutter clean and rebuild" error instead of corrupting memory. Bump `FINGERPRINT_API_VERSION` (Rust) together with `_apiVersion` (Dart) whenever an FRB signature changes
+
 ## 0.3.1
 
 ### Bug Fixes
@@ -5,12 +11,6 @@
 - Fixed crashes (OOM-kill, no panic message) when fingerprinting very long files: the decoder streamed the entire PCM into one buffer (~12 GB for an 18-hour file). Decode now feeds the fingerprinter in ~1s chunks with O(chunk) memory; output is bit-identical (proven by test)
 - Dependency panics inside fingerprint work now surface as clean errors instead of aborting the process on native
 - `duration_secs` saturates instead of wrapping on absurdly long inputs
-
-## 0.3.1
-
-### Bug Fixes
-
-- Fixed native crashes (`capacity overflow` in `Vec::with_capacity`) when the Dart bindings and the native library disagree on the wire format, e.g. a stale prebuilt `.so` after upgrading: the SSE decoder trusted a length prefix that could reinterpret to ~2⁶⁴ bytes. Dart now verifies a native API version on init and fails with a clear "run flutter clean and rebuild" error instead of corrupting memory. Bump `FINGERPRINT_API_VERSION` (Rust) together with `_apiVersion` (Dart) whenever an FRB signature changes
 
 ## 0.3.0
 
