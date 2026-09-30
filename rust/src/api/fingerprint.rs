@@ -16,6 +16,20 @@ use symphonia::core::meta::MetadataOptions;
 
 use super::error::FingerprintError;
 
+/// Wire-protocol version. Bump ONLY when an FRB function signature changes
+/// (new/removed/renamed params, changed types). The Dart side verifies this
+/// on init: without the check, a stale native library decodes garbage
+/// lengths (e.g. negative `i32` -> huge `usize`) and dies in `capacity
+/// overflow` instead of reporting anything useful.
+const FINGERPRINT_API_VERSION: u32 = 1;
+
+/// Returns [`FINGERPRINT_API_VERSION`]. Called by Dart on init to detect a
+/// stale native library before any real payload crosses FFI.
+#[frb(sync)]
+pub fn fingerprint_api_version() -> u32 {
+    FINGERPRINT_API_VERSION
+}
+
 /// A perceptual audio fingerprint.
 ///
 /// Two recordings of the same audio produce equal (or near-equal)
@@ -659,6 +673,91 @@ mod tests {
         println!("corpus: {} files, {ok} ok, {err} err", files.len());
     }
 
+    // Mutation fuzz: flip bytes and smash u32/u64 fields in real files.
+    // Any panic is the crash bug — the harness catches unwinds per input
+    // and reports the exact mutation for minimization.
+    // Slow (decodes real files); run explicitly, not in default CI.
+    #[tokio::test(flavor = "multi_thread")]
+    #[ignore]
+    async fn fuzz_mutations_never_panic() {
+        let mut seeds: Vec<Vec<u8>> = Vec::new();
+        for name in [
+            "chirp.mp3",
+            "chirp.flac",
+            "chirp.ogg",
+            "chirp.m4a",
+            "chirp.wav",
+        ] {
+            if let Ok(b) = std::fs::read(format!("../test/fixtures/{name}")) {
+                seeds.push(b);
+            }
+        }
+        for name in ["tone.mp3", "tiny.mp3", "tone.opus"] {
+            if let Ok(b) = std::fs::read(format!("/tmp/opencode/fuzz/{name}")) {
+                seeds.push(b);
+            }
+        }
+        assert!(!seeds.is_empty());
+        let mut state: u64 = 0x243F6A8885A308D3;
+        let mut next = move |bound: usize| {
+            state = state
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            (state >> 33) as usize % bound.max(1)
+        };
+        let mut failures = Vec::new();
+        for iter in 0..3000 {
+            let src = &seeds[iter % seeds.len()];
+            if src.is_empty() {
+                continue;
+            }
+            let mut input = src.clone();
+            match iter % 4 {
+                0 => {
+                    // Random byte flips.
+                    for _ in 0..1 + next(8) {
+                        let at = next(input.len());
+                        input[at] = next(256) as u8;
+                    }
+                }
+                1 => {
+                    // Smash a u32 field with max.
+                    if input.len() >= 4 {
+                        let at = next(input.len() - 3);
+                        input[at..at + 4].copy_from_slice(&u32::MAX.to_le_bytes());
+                    }
+                }
+                2 => {
+                    // Smash a u64 field with max.
+                    if input.len() >= 8 {
+                        let at = next(input.len() - 7);
+                        input[at..at + 8].copy_from_slice(&u64::MAX.to_le_bytes());
+                    }
+                }
+                _ => {
+                    // Truncate at a random point.
+                    input.truncate(next(input.len()));
+                }
+            }
+            // One OS thread per input: a panic is caught by join() and
+            // recorded instead of killing the harness.
+            let h = std::thread::spawn(move || {
+                let rt = tokio::runtime::Builder::new_current_thread()
+                    .build()
+                    .unwrap();
+                rt.block_on(fingerprint_from_bytes(input, None))
+            });
+            if h.join().is_err() {
+                failures.push(iter);
+                eprintln!("PANIC on iter {iter}");
+                if failures.len() >= 3 {
+                    break;
+                }
+            }
+        }
+        assert!(failures.is_empty(), "panics at iters {failures:?}");
+    }
+
     // Similarity must handle huge and adversarial inputs without panic
     // (or absurd hangs): identical walls, pure noise, tiny-vs-huge.
     #[tokio::test(flavor = "multi_thread")]
@@ -784,6 +883,14 @@ mod tests {
                 let _ = fingerprint_from_bytes(bytes[..cut].to_vec(), None).await;
             }
         }
+    }
+
+    // The handshake both sides of init compare. Bump together with the
+    // Dart `_apiVersion`, and only when an FRB wire signature changes.
+    #[test]
+    fn api_version_is_current() {
+        assert_eq!(fingerprint_api_version(), FINGERPRINT_API_VERSION);
+        assert_eq!(FINGERPRINT_API_VERSION, 1);
     }
 
     #[test]

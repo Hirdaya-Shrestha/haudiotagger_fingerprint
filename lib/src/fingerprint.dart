@@ -78,7 +78,21 @@ class CancellationToken implements iface.CancellationToken {
 class HaudioFingerprint {
   static Future<void>? _initFuture;
 
-  static Future<void> _ensureInit() => _initFuture ??= RustLib.init();
+  /// Must match `FINGERPRINT_API_VERSION` in rust/src/api/fingerprint.rs.
+  /// Bump both together whenever an FRB signature changes.
+  static const _apiVersion = 1;
+
+  static Future<void> _ensureInit() => _initFuture ??= _initAndVerify();
+
+  static Future<void> _initAndVerify() async {
+    await RustLib.init();
+    final native = fp.fingerprintApiVersion();
+    if (native != _apiVersion) {
+      throw StateError('haudiotagger_fingerprint native library out of sync '
+          '(Dart $_apiVersion vs native $native). '
+          'Run flutter clean and rebuild the app.');
+    }
+  }
 
   /// Fingerprint the audio file at `path`.
   ///

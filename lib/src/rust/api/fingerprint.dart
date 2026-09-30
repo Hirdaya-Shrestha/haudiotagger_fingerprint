@@ -7,8 +7,13 @@ import '../frb_generated.dart';
 import 'error.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `cancel_flag`, `decode_to_pcm`, `fingerprint_inner`, `fingerprint_pcm`, `is_cancelled`
+// These functions are ignored because they are not marked as `pub`: `cancel_flag`, `duration_secs`, `fingerprint_inner`, `fingerprint_sync_streaming`, `is_cancelled`, `open_decoder`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
+
+/// Returns [`FINGERPRINT_API_VERSION`]. Called by Dart on init to detect a
+/// stale native library before any real payload crosses FFI.
+int fingerprintApiVersion() =>
+    RustLib.instance.api.crateApiFingerprintFingerprintApiVersion();
 
 /// Compute the fingerprint of the audio file at `path`.
 ///
