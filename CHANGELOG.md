@@ -1,3 +1,11 @@
+## 0.3.1
+
+### Bug Fixes
+
+- Fixed crashes (OOM-kill, no panic message) when fingerprinting very long files: the decoder streamed the entire PCM into one buffer (~12 GB for an 18-hour file). Decode now feeds the fingerprinter in ~1s chunks with O(chunk) memory; output is bit-identical (proven by test)
+- Dependency panics inside fingerprint work now surface as clean errors instead of aborting the process on native
+- `duration_secs` saturates instead of wrapping on absurdly long inputs
+
 ## 0.3.0
 
 ### Bug Fixes
