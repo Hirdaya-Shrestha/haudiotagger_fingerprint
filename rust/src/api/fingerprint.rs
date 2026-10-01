@@ -45,9 +45,8 @@ pub struct AudioFingerprint {
 
 /// Compute the fingerprint of the audio file at `path`.
 ///
-/// Decodes the full audio stream (MP3, FLAC, Ogg Vorbis, WAV, AIFF,
-/// M4A/AAC/ALAC) and fingerprints the PCM content. Tags, filenames, and
-/// container differences do not affect the result.
+/// Streams straight from disk: even multi-GB files never sit fully in RAM.
+/// Tags, filenames, and container differences do not affect the result.
 ///
 /// Async without touching FRB's worker pool (whose web bootstrap hardcodes
 /// the `wasm_bindgen` JS global): native runs on tokio background threads,
@@ -57,10 +56,36 @@ pub async fn fingerprint(
     path: String,
     cancel_id: Option<u64>,
 ) -> Result<AudioFingerprint, FingerprintError> {
-    let bytes = std::fs::read(&path).map_err(|e| FingerprintError::OpenFile {
-        message: format!("Could not read file: {e}"),
-    })?;
-    fingerprint_inner(bytes, cancel_id).await
+    let flag = cancel_flag(cancel_id);
+    if is_cancelled(&flag) {
+        return Err(FingerprintError::Cancelled);
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let file = std::fs::File::open(&path).map_err(|e| FingerprintError::OpenFile {
+            message: format!("Could not read file: {e}"),
+        })?;
+        let mss = MediaSourceStream::new(Box::new(file), Default::default());
+        // A dependency panic becomes a clean error via the join, never a crash.
+        let out =
+            tokio::task::spawn_blocking(move || fingerprint_sync_streaming_from_source(mss, &flag))
+                .await
+                .map_err(|_| FingerprintError::Fingerprint {
+                    message: "Fingerprint task failed".to_string(),
+                })?;
+        return out.map(|(values, duration_secs)| AudioFingerprint {
+            values,
+            duration_secs,
+        });
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        // No filesystem on WASM; preserved behavior is the OpenFile error.
+        let bytes = std::fs::read(&path).map_err(|e| FingerprintError::OpenFile {
+            message: format!("Could not read file: {e}"),
+        })?;
+        return fingerprint_inner(bytes, cancel_id).await;
+    }
 }
 
 /// Compute the fingerprint of in-memory audio `bytes` (for web/WASM).
@@ -203,7 +228,21 @@ fn open_decoder(
     FingerprintError,
 > {
     let cursor = Cursor::new(bytes);
-    let mss = MediaSourceStream::new(Box::new(cursor), Default::default());
+    open_decoder_from_source(MediaSourceStream::new(Box::new(cursor), Default::default()))
+}
+
+/// Like [`open_decoder`] but over an already-opened media source, so callers
+/// holding files (or anything else) never buffer whole inputs in RAM.
+fn open_decoder_from_source(
+    mss: MediaSourceStream<'_>,
+) -> Result<
+    (
+        Box<dyn FormatReader + '_>,
+        u32,
+        symphonia::core::codecs::audio::AudioCodecParameters,
+    ),
+    FingerprintError,
+> {
     // ponytail: no extension hint — symphonia sniffs the container from content,
     // so renames/copies fingerprint identically without relying on filenames.
     let format = symphonia::default::get_probe()
@@ -255,8 +294,22 @@ fn fingerprint_sync_streaming(
     bytes: &[u8],
     flag: &Option<Arc<AtomicBool>>,
 ) -> Result<(Vec<u32>, u32), FingerprintError> {
+    let cursor = Cursor::new(bytes);
+    fingerprint_sync_streaming_from_source(
+        MediaSourceStream::new(Box::new(cursor), Default::default()),
+        flag,
+    )
+}
+
+/// Streaming core shared by the bytes and file paths: probe once, then feed
+/// the printer in chunks so memory stays O(chunk) no matter the file size.
+#[cfg(not(target_arch = "wasm32"))]
+fn fingerprint_sync_streaming_from_source(
+    mss: MediaSourceStream<'_>,
+    flag: &Option<Arc<AtomicBool>>,
+) -> Result<(Vec<u32>, u32), FingerprintError> {
     const FEED_EVERY_SAMPLES: usize = 88200; // ~1s of stereo 44.1kHz
-    let (mut format, track_id, audio_params) = open_decoder(bytes)?;
+    let (mut format, track_id, audio_params) = open_decoder_from_source(mss)?;
     let mut decoder = symphonia::default::get_codecs()
         .make_audio_decoder(&audio_params, &AudioDecoderOptions::default())
         .map_err(|_| FingerprintError::Unsupported {
@@ -544,6 +597,65 @@ mod tests {
             let (stream_vals, stream_dur) = fingerprint_sync_streaming(bytes, &None).unwrap();
             assert_eq!(one_vals, stream_vals);
             assert_eq!(one_dur, stream_dur);
+        }
+    }
+
+    // The file path must stream from disk (never buffer whole files) yet
+    // produce output identical to the bytes API on the same content.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn path_and_bytes_agree() {
+        for name in [
+            "chirp.mp3",
+            "chirp.flac",
+            "chirp.ogg",
+            "chirp.m4a",
+            "chirp.wav",
+        ] {
+            let path = format!("../test/fixtures/{name}");
+            let bytes = match std::fs::read(&path) {
+                Ok(b) => b,
+                Err(_) => continue,
+            };
+            let a = fingerprint(path, None).await.unwrap();
+            let b = fingerprint_from_bytes(bytes, None).await.unwrap();
+            assert_eq!(a.values, b.values, "values differ for {name}");
+            assert_eq!(
+                a.duration_secs, b.duration_secs,
+                "duration differs for {name}"
+            );
+        }
+    }
+
+    // An 18-hour file must fingerprint with bounded memory. Asserts peak RSS
+    // stays under 1 GB (the old collect-everything design needed ~12 GB for
+    // this input and OOM-killed phones). Skipped without the file.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn huge_file_stays_memory_bounded() {
+        let path = std::env::var("HAUDIO_BIGFILE")
+            .unwrap_or_else(|_| "/home/hirdaya/Downloads/sample-1gb.mp3".to_string());
+        if std::fs::metadata(&path).is_err() {
+            return;
+        }
+        let fp = fingerprint(path, None).await.unwrap();
+        // Frame-accurate duration. (Container metadata claims ~18.6h, but the
+        // file has no Xing header so that is a naive size/bitrate estimate;
+        // decode proves ~9.3h of higher-bitrate audio. Trust frames, not tags.)
+        assert!(
+            fp.duration_secs > 30000,
+            "expected many hours, got {}",
+            fp.duration_secs
+        );
+        assert!(!fp.values.is_empty());
+        #[cfg(target_os = "linux")]
+        {
+            let status = std::fs::read_to_string("/proc/self/status").unwrap();
+            let kb: u64 = status
+                .lines()
+                .find(|l| l.starts_with("VmHWM:"))
+                .and_then(|l| l.split_whitespace().nth(1))
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(u64::MAX);
+            assert!(kb < 1024 * 1024, "peak RSS {kb} KiB exceeds 1 GiB budget");
         }
     }
 

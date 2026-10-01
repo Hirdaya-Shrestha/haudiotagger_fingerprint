@@ -1,3 +1,9 @@
+## 0.3.3
+
+### Bug Fixes
+
+- Fixed OOM crashes on very large files: the file-path API buffered the whole file into RAM first (~1 GB Vec before decoding even started, plus full PCM buffering). It now streams straight from the file handle with O(chunk) memory; path and bytes APIs produce bit-identical output (proven by test)
+
 ## 0.3.2
 
 ### Bug Fixes
