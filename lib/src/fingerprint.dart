@@ -5,6 +5,7 @@ import 'package:haudiotagger_interface/haudiotagger_interface.dart'
 import 'package:haudiotagger_interface/haudiotagger_interface.dart' as iface;
 
 import 'rust/frb_generated.dart';
+import 'rust/api/error.dart' show FingerprintError_Fingerprint;
 import 'rust/api/fingerprint.dart' as fp;
 
 export 'package:haudiotagger_interface/haudiotagger_interface.dart'
@@ -82,6 +83,14 @@ class HaudioFingerprint {
   /// Bump both together whenever an FRB signature changes.
   static const _apiVersion = 1;
 
+  /// Largest input accepted by [fingerprintFromBytes].
+  ///
+  /// FRB transfers Dart→Rust through a doubling buffer addressed by signed
+  /// 32-bit lengths: any message that would grow past 2³¹ bytes turns
+  /// negative across FFI and aborts native code with `capacity overflow`.
+  /// Capping the input below 2³⁰ keeps every growth step in range.
+  static const maxBytesLength = 1073741824 - 65536;
+
   static Future<void> _ensureInit() => _initFuture ??= _initAndVerify();
 
   static Future<void> _initAndVerify() async {
@@ -112,9 +121,18 @@ class HaudioFingerprint {
   /// Fingerprint in-memory audio `bytes` (for web/WASM).
   ///
   /// Pass a [cancellationToken] to abort long scans.
+  ///
+  /// Throws [FingerprintError] if `bytes` exceeds [maxBytesLength] — use
+  /// [fingerprint] on native instead, which streams from disk.
   static Future<AudioFingerprint> fingerprintFromBytes(Uint8List bytes,
       {CancellationToken? cancellationToken}) async {
     await _ensureInit();
+    if (bytes.length > maxBytesLength) {
+      throw FingerprintError_Fingerprint(
+          message: 'Audio data (${bytes.length} bytes) exceeds the '
+              'in-memory transfer limit ($maxBytesLength bytes). '
+              'On native, use fingerprint(path), which streams from disk.');
+    }
     final raw = await fp.fingerprintFromBytes(
         bytes: bytes, cancelId: cancellationToken?._id);
     return AudioFingerprint(values: raw.values, durationSecs: raw.durationSecs);

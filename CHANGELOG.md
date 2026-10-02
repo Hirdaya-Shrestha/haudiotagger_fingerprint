@@ -1,3 +1,9 @@
+## 0.3.4
+
+### Bug Fixes
+
+- Fixed native crashes (`capacity overflow` in FRB's `frb_rust_vec_u8_resize`) when sending very large inputs through `fingerprintFromBytes`: the transfer buffer doubles toward signed-32-bit lengths, so payloads approaching 1 GiB turned negative across FFI and aborted the process. Inputs over ~1 GiB now fail fast with a clear error directing to `fingerprint(path)`; smaller inputs are unaffected
+
 ## 0.3.3
 
 ### Bug Fixes
