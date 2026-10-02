@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 import 'error.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `cancel_flag`, `duration_secs`, `fingerprint_inner`, `fingerprint_sync_streaming`, `is_cancelled`, `open_decoder`
+// These functions are ignored because they are not marked as `pub`: `cancel_flag`, `duration_secs`, `fingerprint_inner`, `fingerprint_sync_streaming_from_source`, `fingerprint_sync_streaming`, `is_cancelled`, `open_decoder_from_source`, `open_decoder`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
 
 /// Returns [`FINGERPRINT_API_VERSION`]. Called by Dart on init to detect a
@@ -17,9 +17,8 @@ int fingerprintApiVersion() =>
 
 /// Compute the fingerprint of the audio file at `path`.
 ///
-/// Decodes the full audio stream (MP3, FLAC, Ogg Vorbis, WAV, AIFF,
-/// M4A/AAC/ALAC) and fingerprints the PCM content. Tags, filenames, and
-/// container differences do not affect the result.
+/// Streams straight from disk: even multi-GB files never sit fully in RAM.
+/// Tags, filenames, and container differences do not affect the result.
 ///
 /// Async without touching FRB's worker pool (whose web bootstrap hardcodes
 /// the `wasm_bindgen` JS global): native runs on tokio background threads,
@@ -46,6 +45,19 @@ Future<AudioFingerprint> fingerprintFromBytes(
 /// unrelated audio scores near `0.0`.
 double similarity({required AudioFingerprint a, required AudioFingerprint b}) =>
     RustLib.instance.api.crateApiFingerprintSimilarity(a: a, b: b);
+
+/// Score how much of `clip` is contained in `haystack`, from `0.0` to `1.0`.
+///
+/// Clip lookup: a short recording matched against a full song scores
+/// near `1.0` when present and near `0.0` when absent - regardless of the
+/// length ratio (unlike [`similarity`], which normalizes by the longer side
+/// and would score a 10s clip in a 4min song near zero).
+///
+/// Directional: pass the full audio as `haystack`, the excerpt as `clip`.
+Future<double> contains(
+        {required AudioFingerprint haystack, required AudioFingerprint clip}) =>
+    RustLib.instance.api
+        .crateApiFingerprintContains(haystack: haystack, clip: clip);
 
 /// Create a cancellation token, returned as an id for Dart's
 /// `CancellationToken`. Pass it as `cancel_id` to abort long scans.

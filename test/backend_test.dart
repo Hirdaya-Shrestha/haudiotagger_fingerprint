@@ -7,7 +7,7 @@ import 'dart:typed_data';
 import 'test_utils.dart';
 
 // Proves the federated wiring: the dartPluginClass registration hooks the
-// real Rust backend into the shared registry — the same path
+// real Rust backend into the shared registry - the same path
 // Haudiotagger.fingerprint() takes when both packages are installed.
 //
 // Uses synthesized WAV bytes (no dart:io) so these tests also run in a real
@@ -81,5 +81,10 @@ class _UnregisteredProbe implements iface.FingerprintBackend {
   @override
   Future<double> similarity(
           iface.AudioFingerprint a, iface.AudioFingerprint b) =>
+      throw StateError('not wired');
+
+  @override
+  Future<double> contains(
+          iface.AudioFingerprint haystack, iface.AudioFingerprint clip) =>
       throw StateError('not wired');
 }

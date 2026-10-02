@@ -21,7 +21,7 @@ use super::error::FingerprintError;
 /// on init: without the check, a stale native library decodes garbage
 /// lengths (e.g. negative `i32` -> huge `usize`) and dies in `capacity
 /// overflow` instead of reporting anything useful.
-const FINGERPRINT_API_VERSION: u32 = 1;
+const FINGERPRINT_API_VERSION: u32 = 2;
 
 /// Returns [`FINGERPRINT_API_VERSION`]. Called by Dart on init to detect a
 /// stale native library before any real payload crosses FFI.
@@ -128,7 +128,7 @@ async fn fingerprint_inner(
         if is_cancelled(&flag) {
             return Err(FingerprintError::Cancelled);
         }
-        // ponytail: sync stretch — the printer is !Send, so it must never be
+        // ponytail: sync stretch - the printer is !Send, so it must never be
         // alive across an await. Decode yields happen above, none in here.
         let (values, duration_secs) = fingerprint_pcm(&samples, sample_rate, channels)?;
         Ok(AudioFingerprint {
@@ -158,6 +158,42 @@ pub fn similarity(a: AudioFingerprint, b: AudioFingerprint) -> Result<f64, Finge
         }
     })?;
     let denom = a.values.len().max(b.values.len()).max(1) as f64;
+    let best = segments
+        .iter()
+        .map(|s| s.items_count as f64 * (1.0 - (s.score / 32.0).clamp(0.0, 1.0)))
+        .fold(0.0, f64::max);
+    Ok((best / denom).clamp(0.0, 1.0))
+}
+
+/// Score how much of `clip` is contained in `haystack`, from `0.0` to `1.0`.
+///
+/// Clip lookup: a short recording matched against a full song scores
+/// near `1.0` when present and near `0.0` when absent - regardless of the
+/// length ratio (unlike [`similarity`], which normalizes by the longer side
+/// and would score a 10s clip in a 4min song near zero).
+///
+/// Directional: pass the full audio as `haystack`, the excerpt as `clip`.
+pub async fn contains(
+    haystack: AudioFingerprint,
+    clip: AudioFingerprint,
+) -> Result<f64, FingerprintError> {
+    if clip.values.is_empty() {
+        return Err(FingerprintError::Fingerprint {
+            message: "Cannot search for an empty clip".to_string(),
+        });
+    }
+    if haystack.values.is_empty() {
+        return Err(FingerprintError::Fingerprint {
+            message: "Cannot search an empty fingerprint".to_string(),
+        });
+    }
+    let config = Configuration::default();
+    let segments = match_fingerprints(&haystack.values, &clip.values, &config).map_err(|e| {
+        FingerprintError::Fingerprint {
+            message: format!("Comparison failed: {e:?}"),
+        }
+    })?;
+    let denom = clip.values.len() as f64;
     let best = segments
         .iter()
         .map(|s| s.items_count as f64 * (1.0 - (s.score / 32.0).clamp(0.0, 1.0)))
@@ -207,7 +243,7 @@ pub fn cancellation_token_cancel(id: u64) {
 }
 
 /// Release a token id. Ids are reusable resources owned by the caller:
-// ponytail: no auto-drop on purpose — dropping would silently break token
+// ponytail: no auto-drop on purpose - dropping would silently break token
 // reuse across scans. Documented dispose pattern instead. Idempotent.
 #[frb(sync)]
 pub fn cancellation_token_free(id: u64) {
@@ -216,7 +252,7 @@ pub fn cancellation_token_free(id: u64) {
 
 /// Shared probe/track setup for both decode paths. Returns the format
 /// reader, the selected audio track id, and OWNED codec params (cloned so
-/// no lifetimes escape — callers build their own decoder).
+/// no lifetimes escape - callers build their own decoder).
 fn open_decoder(
     bytes: &[u8],
 ) -> Result<
@@ -243,7 +279,7 @@ fn open_decoder_from_source(
     ),
     FingerprintError,
 > {
-    // ponytail: no extension hint — symphonia sniffs the container from content,
+    // ponytail: no extension hint - symphonia sniffs the container from content,
     // so renames/copies fingerprint identically without relying on filenames.
     let format = symphonia::default::get_probe()
         .probe(
@@ -287,7 +323,7 @@ fn duration_secs(total_frames: u64, sample_rate: u32, channels: u32) -> u32 {
 
 /// Native blocking path: stream decode→feed with O(chunk) memory no matter
 /// the file size, so hour-long files can't OOM the scanner. Fully synchronous
-/// (runs on tokio's blocking pool) — no awaits, so the !Send printer can
+/// (runs on tokio's blocking pool) - no awaits, so the !Send printer can
 /// live across the whole loop.
 #[cfg(not(target_arch = "wasm32"))]
 fn fingerprint_sync_streaming(
@@ -480,7 +516,7 @@ fn fingerprint_pcm(
     sample_rate: u32,
     channels: u32,
 ) -> Result<(Vec<u32>, u32), FingerprintError> {
-    // ponytail: Configuration::default() is preset_test2 — the same algorithm
+    // ponytail: Configuration::default() is preset_test2 - the same algorithm
     // fpcalc/AcoustID use, so fingerprints stay comparable with that ecosystem.
     let config = Configuration::default();
     let mut printer = Fingerprinter::new(&config);
@@ -507,12 +543,41 @@ mod tests {
 
     /// Synthesize a 16-bit PCM WAV (linear frequency sweep) with std only.
     /// Sweeps give time-varying spectra, unlike pure tones (which are
-    /// stationary — and octave-invariant under chroma features, so 440Hz
+    /// stationary - and octave-invariant under chroma features, so 440Hz
     /// and 880Hz sines fingerprint identically, as they should).
     fn wav_bytes(f0_hz: f32, f1_hz: f32, secs: u32, sample_rate: u32) -> Vec<u8> {
         let n = (secs * sample_rate) as usize;
-        let mut data = Vec::with_capacity(44 + n * 2);
+        let mut samples = Vec::with_capacity(n);
+        for i in 0..n {
+            let t = i as f32 / sample_rate as f32;
+            let phase = 2.0
+                * std::f32::consts::PI
+                * (f0_hz * t + (f1_hz - f0_hz) * t * t / (2.0 * secs as f32));
+            samples.push((f32::sin(phase) * 20000.0) as i16);
+        }
+        wav_file(&samples, sample_rate)
+    }
+
+    /// Melody of (freq_hz, secs) notes. Unlike full-octave sweeps (which cover
+    /// every pitch class and match almost anything in chroma space), distinct
+    /// melodies discriminate properly - the right signal for contains tests.
+    fn wav_notes(notes: &[(f32, u32)], sample_rate: u32) -> Vec<u8> {
+        let mut samples = Vec::new();
+        for &(freq, secs) in notes {
+            let n = (secs * sample_rate) as usize;
+            for i in 0..n {
+                let t = i as f32 / sample_rate as f32;
+                let s = (f32::sin(2.0 * std::f32::consts::PI * freq * t) * 20000.0) as i16;
+                samples.push(s);
+            }
+        }
+        wav_file(&samples, sample_rate)
+    }
+
+    fn wav_file(samples: &[i16], sample_rate: u32) -> Vec<u8> {
+        let n = samples.len();
         let byte_rate = sample_rate * 2;
+        let mut data = Vec::with_capacity(44 + n * 2);
         data.extend_from_slice(b"RIFF");
         data.extend_from_slice(&((36 + n * 2) as u32).to_le_bytes());
         data.extend_from_slice(b"WAVEfmt ");
@@ -525,12 +590,7 @@ mod tests {
         data.extend_from_slice(&16u16.to_le_bytes());
         data.extend_from_slice(b"data");
         data.extend_from_slice(&((n * 2) as u32).to_le_bytes());
-        for i in 0..n {
-            let t = i as f32 / sample_rate as f32;
-            let phase = 2.0
-                * std::f32::consts::PI
-                * (f0_hz * t + (f1_hz - f0_hz) * t * t / (2.0 * secs as f32));
-            let s = (f32::sin(phase) * 20000.0) as i16;
+        for s in samples {
             data.extend_from_slice(&s.to_le_bytes());
         }
         data
@@ -670,6 +730,76 @@ mod tests {
         assert!(similarity(a, b).unwrap() < 0.5);
     }
 
+    // Calibration probes: print actual scores, assert loose bounds.
+    // Tighten only from measured numbers, never from guesses.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn contains_finds_clip_in_song() {
+        // 12s song: A – C# – E – A arpeggio ×3. Clip = seconds 4..8,
+        // an exact repeat of the 4-note motif.
+        let motif = [(440.0, 1), (554.0, 1), (659.0, 1), (880.0, 1)];
+        let mut song_notes = Vec::new();
+        for _ in 0..3 {
+            song_notes.extend_from_slice(&motif);
+        }
+        let song = fingerprint_from_bytes(wav_notes(&song_notes, 44100), None)
+            .await
+            .unwrap();
+        let clip = fingerprint_from_bytes(wav_notes(&motif, 44100), None)
+            .await
+            .unwrap();
+        let score = contains(song, clip).await.unwrap();
+        eprintln!("CLIP-IN-SONG score={score}");
+        assert!(score > 0.7, "clip should be found, got {score}");
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn contains_rejects_unrelated_clip() {
+        let motif = [(440.0, 1), (554.0, 1), (659.0, 1), (880.0, 1)];
+        let mut song_notes = Vec::new();
+        for _ in 0..3 {
+            song_notes.extend_from_slice(&motif);
+        }
+        let song = fingerprint_from_bytes(wav_notes(&song_notes, 44100), None)
+            .await
+            .unwrap();
+        // Disjoint pitch set (B – D – F# – B): shares almost no chroma.
+        let other = [(494.0, 1), (587.0, 1), (740.0, 1), (988.0, 1)];
+        let clip = fingerprint_from_bytes(wav_notes(&other, 44100), None)
+            .await
+            .unwrap();
+        let score = contains(song, clip).await.unwrap();
+        eprintln!("UNRELATED-CLIP score={score}");
+        assert!(score < 0.3, "unrelated clip should score low, got {score}");
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn contains_identical_scores_one() {
+        let a = fingerprint_from_bytes(wav_bytes(440.0, 880.0, 5, 44100), None)
+            .await
+            .unwrap();
+        let b = fingerprint_from_bytes(wav_bytes(440.0, 880.0, 5, 44100), None)
+            .await
+            .unwrap();
+        assert_eq!(contains(a, b).await.unwrap(), 1.0);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn contains_rejects_empty_clip() {
+        let song = fingerprint_from_bytes(wav_bytes(440.0, 880.0, 5, 44100), None)
+            .await
+            .unwrap();
+        let empty = AudioFingerprint {
+            values: vec![],
+            duration_secs: 0,
+        };
+        assert!(contains(song.clone(), empty).await.is_err());
+        let empty = AudioFingerprint {
+            values: vec![],
+            duration_secs: 0,
+        };
+        assert!(contains(empty, song).await.is_err());
+    }
+
     #[tokio::test(flavor = "multi_thread")]
     async fn garbage_bytes_are_rejected() {
         assert!(
@@ -680,7 +810,7 @@ mod tests {
     }
 
     // Every input below must return Err, never panic. If any of these
-    // panics, that is the crash bug — fix the code, not the test.
+    // panics, that is the crash bug - fix the code, not the test.
     #[tokio::test(flavor = "multi_thread")]
     async fn malformed_inputs_never_panic() {
         let mut bad: Vec<Vec<u8>> = vec![
@@ -730,7 +860,7 @@ mod tests {
     }
 
     // Real-world corpus fuzz: set HAUDIO_FUZZ_DIR to a music folder and
-    // every audio file in it must Ok or Err — never panic. Skipped otherwise
+    // every audio file in it must Ok or Err - never panic. Skipped otherwise
     // so CI stays hermetic.
     #[tokio::test(flavor = "multi_thread", worker_threads = 8)]
     async fn corpus_files_never_panic() {
@@ -786,7 +916,7 @@ mod tests {
     }
 
     // Mutation fuzz: flip bytes and smash u32/u64 fields in real files.
-    // Any panic is the crash bug — the harness catches unwinds per input
+    // Any panic is the crash bug - the harness catches unwinds per input
     // and reports the exact mutation for minimization.
     // Slow (decodes real files); run explicitly, not in default CI.
     #[tokio::test(flavor = "multi_thread")]
@@ -916,7 +1046,7 @@ mod tests {
     }
 
     // Real-world exotics (generated by ffmpeg): Opus must fail cleanly
-    // (no decoder), everything else must Ok or Err — never panic.
+    // (no decoder), everything else must Ok or Err - never panic.
     // Fixtures live outside the repo; missing files are skipped so this
     // stays green on machines without them.
     #[tokio::test(flavor = "multi_thread")]
@@ -1002,7 +1132,7 @@ mod tests {
     #[test]
     fn api_version_is_current() {
         assert_eq!(fingerprint_api_version(), FINGERPRINT_API_VERSION);
-        assert_eq!(FINGERPRINT_API_VERSION, 1);
+        assert_eq!(FINGERPRINT_API_VERSION, 2);
     }
 
     #[test]

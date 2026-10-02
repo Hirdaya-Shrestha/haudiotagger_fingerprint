@@ -3,6 +3,8 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:haudiotagger_fingerprint/haudiotagger_fingerprint.dart';
+import 'package:haudiotagger_interface/haudiotagger_interface.dart'
+    show FingerprintRegistry;
 
 Uint8List fixture(String name) => File('test/fixtures/$name').readAsBytesSync();
 
@@ -90,6 +92,32 @@ void main() {
       await token.dispose();
       await token.dispose();
       await token.cancel();
+    });
+  });
+
+  group('contains', () {
+    test('finds clip cut from the song', () async {
+      final song =
+          await HaudioFingerprint.fingerprintFromBytes(fixture('song20.mp3'));
+      final clip =
+          await HaudioFingerprint.fingerprintFromBytes(fixture('clip3.mp3'));
+      expect(await HaudioFingerprint.contains(song, clip), greaterThan(0.7));
+    });
+
+    test('identical fingerprints contain each other fully', () async {
+      final fp =
+          await HaudioFingerprint.fingerprintFromBytes(fixture('chirp.flac'));
+      expect(await HaudioFingerprint.contains(fp, fp), 1.0);
+    });
+
+    test('works through the registry like Haudiotagger would', () async {
+      HaudioFingerprintBackend.registerWith();
+      final song =
+          await HaudioFingerprint.fingerprintFromBytes(fixture('song20.mp3'));
+      final clip =
+          await HaudioFingerprint.fingerprintFromBytes(fixture('clip3.mp3'));
+      expect(await FingerprintRegistry.instance.contains(song, clip),
+          greaterThan(0.7));
     });
   });
 }

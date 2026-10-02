@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  Duplicates · Renames · Re-encodes — matched by content, not filenames
+  Duplicates · Renames · Re-encodes - matched by content, not filenames
 </p>
 
 <p align="center">
@@ -21,7 +21,7 @@
 </p>
 
 <p align="center">
-  <a href="https://haudiotagger.hirdaya-shrestha.com.np/docs/fingerprint"><strong>Documentation</strong></a>
+  <a href="https://haudiotagger.hirdaya-shrestha.com.np/docs/fingerprinting"><strong>Documentation</strong></a>
   ·
   <a href="https://github.com/Hirdaya-Shrestha/haudiotagger_fingerprint"><strong>GitHub</strong></a>
   ·
@@ -32,7 +32,7 @@
 
 ## Why haudiotagger_fingerprint?
 
-Filenames lie and tags go missing — but the audio doesn't. This package
+Filenames lie and tags go missing - but the audio doesn't. This package
 fingerprints **what a recording sounds like**, so this:
 
 ```text
@@ -49,8 +49,8 @@ can be compared by content instead of by name.
 - 🧬 Chromaprint-compatible perceptual fingerprints (same algorithm as fpcalc/AcoustID)
 - 🎵 MP3, FLAC, Ogg Vorbis, WAV, AIFF, M4A/AAC/ALAC
 - 🌍 Android, iOS, Linux, macOS, Windows & Web
-- 🦀 100% pure Rust — no C dependencies, builds everywhere including WASM
-- 📦 Separate lightweight package — zero cost unless you depend on it
+- 🦀 100% pure Rust - no C dependencies, builds everywhere including WASM
+- 📦 Separate lightweight package - zero cost unless you depend on it
 
 ---
 
@@ -122,7 +122,7 @@ final fp = await HaudioFingerprint.fingerprintFromBytes(bytes);
 ### Unified API with haudiotagger
 
 With both packages installed, fingerprinting is also available through
-`Haudiotagger` — no extra imports or init calls. This package
+`Haudiotagger` - no extra imports or init calls. This package
 self-registers as the backend at app startup:
 
 ```dart
@@ -130,15 +130,30 @@ import 'package:haudiotagger/haudiotagger.dart';
 
 final fp = await Haudiotagger.fingerprint('Song A.mp3');
 final score = await Haudiotagger.similarity(a, b);
+final hit = await Haudiotagger.contains(songFp, clipFp);
 ```
 
 Without this package installed, those calls throw a `StateError` telling
-you to add it. Requires `haudiotagger ^2.2.0`.
+you to add it. Requires `haudiotagger ^3.0.0`.
 
 ### Finding duplicates
 
 Group files with `similarity >= 0.8` as the same recording, then use each
 file's metadata (title/artist/duration) to pick which copy to keep.
+
+### Finding a clip inside a song
+
+`similarity` compares whole recordings, so a 5-second excerpt inside a
+20-second song scores near zero. `contains` normalizes by the clip instead -
+pass the full audio as `haystack`, the excerpt as `clip`:
+
+```dart
+// 1.0 when the clip comes from the song, 0.0 when it doesn't.
+final score = await HaudioFingerprint.contains(songFp, clipFp);
+```
+
+Scores `>= 0.7` mean "present". Clips need about 5 seconds of audio to
+match reliably - shorter clips produce too few fingerprint items.
 
 ### Cancelling long scans
 
@@ -204,7 +219,7 @@ for bulk library scans.
 
 ## Documentation
 
-- [Fingerprint Guide](https://haudiotagger.hirdaya-shrestha.com.np/docs/fingerprint)
+- [Fingerprint Guide](https://haudiotagger.hirdaya-shrestha.com.np/docs/fingerprinting)
 - [API Reference](https://pub.dev/documentation/haudiotagger_fingerprint/latest/)
 
 **→ [Read the full documentation](https://haudiotagger.hirdaya-shrestha.com.np/docs)**

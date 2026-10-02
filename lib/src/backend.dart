@@ -6,7 +6,7 @@ import 'fingerprint.dart'
     show AudioFingerprint, CancellationToken, HaudioFingerprint;
 
 /// [iface.FingerprintBackend] implementation backed by this package's Rust
-/// engine. Installed automatically — see [HaudioFingerprintBackend].
+/// engine. Installed automatically - see [HaudioFingerprintBackend].
 class FingerprintBackendImpl implements iface.FingerprintBackend {
   const FingerprintBackendImpl();
 
@@ -38,6 +38,12 @@ class FingerprintBackendImpl implements iface.FingerprintBackend {
   @override
   Future<double> similarity(AudioFingerprint a, AudioFingerprint b) async {
     return HaudioFingerprint.similarity(a, b);
+  }
+
+  @override
+  Future<double> contains(
+      AudioFingerprint haystack, AudioFingerprint clip) async {
+    return HaudioFingerprint.contains(haystack, clip);
   }
 }
 

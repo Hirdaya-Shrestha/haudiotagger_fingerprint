@@ -24,7 +24,7 @@ Future<void> main(List<String> args) async {
 
   // Propagate the command's exit code so CI fails when a build fails.
   // (Previously `runner.run` was neither awaited nor assigned, so every
-  // invocation exited 0 — e.g. a broken Android build still showed green.)
+  // invocation exited 0 - e.g. a broken Android build still showed green.)
   try {
     exitCode = await runner.run(args) ?? 0;
   } on UsageException catch (e) {

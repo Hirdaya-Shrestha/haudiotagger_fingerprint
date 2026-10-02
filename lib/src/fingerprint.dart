@@ -81,7 +81,7 @@ class HaudioFingerprint {
 
   /// Must match `FINGERPRINT_API_VERSION` in rust/src/api/fingerprint.rs.
   /// Bump both together whenever an FRB signature changes.
-  static const _apiVersion = 1;
+  static const _apiVersion = 2;
 
   /// Largest input accepted by [fingerprintFromBytes].
   ///
@@ -122,7 +122,7 @@ class HaudioFingerprint {
   ///
   /// Pass a [cancellationToken] to abort long scans.
   ///
-  /// Throws [FingerprintError] if `bytes` exceeds [maxBytesLength] — use
+  /// Throws [FingerprintError] if `bytes` exceeds [maxBytesLength] - use
   /// [fingerprint] on native instead, which streams from disk.
   static Future<AudioFingerprint> fingerprintFromBytes(Uint8List bytes,
       {CancellationToken? cancellationToken}) async {
@@ -146,6 +146,22 @@ class HaudioFingerprint {
     return fp.similarity(
         a: fp.AudioFingerprint(values: a.values, durationSecs: a.durationSecs),
         b: fp.AudioFingerprint(values: b.values, durationSecs: b.durationSecs));
+  }
+
+  /// Score how much of `clip` is contained in `haystack`, `0.0` to `1.0`.
+  ///
+  /// Clip lookup: a short recording matched against a full song
+  /// scores near `1.0` when present and near `0.0` when absent, regardless
+  /// of the length ratio. Directional - pass the full audio as `haystack`,
+  /// the excerpt as `clip`.
+  static Future<double> contains(
+      AudioFingerprint haystack, AudioFingerprint clip) async {
+    await _ensureInit();
+    return fp.contains(
+        haystack: fp.AudioFingerprint(
+            values: haystack.values, durationSecs: haystack.durationSecs),
+        clip: fp.AudioFingerprint(
+            values: clip.values, durationSecs: clip.durationSecs));
   }
 }
 

@@ -1,3 +1,10 @@
+## 0.4.0
+
+### Features
+
+- Clip lookup: `HaudioFingerprint.contains(haystack, clip)` scores how much of a short clip is inside a longer recording - `1.0` when the excerpt is present, `0.0` when absent - normalizing by the clip instead of the longer side like `similarity` does. Also available as `Haudiotagger.contains` when both packages are installed. Scores `>= 0.7` mean "present"; clips need about 5 seconds of audio to match reliably
+- Native API handshake bumped to version 2 for the new FRB function, so a stale prebuilt library fails fast with a rebuild hint. Web `pkg/` rebuilt from the same source
+
 ## 0.3.4
 
 ### Bug Fixes
@@ -35,24 +42,24 @@
 ### Features
 
 - Cooperative cancellation for long scans: `CancellationToken.create()` / `cancel()` / `dispose()`, passable to `fingerprint` and `fingerprintFromBytes`; tripped tokens abort with `FingerprintError.cancelled`. One token per scan; cancel/dispose are idempotent
-- Non-blocking execution: fingerprint calls are now truly async — background threads on native, cooperative yields between decode chunks on web. Public Dart signatures unchanged (still `Future`-based)
+- Non-blocking execution: fingerprint calls are now truly async - background threads on native, cooperative yields between decode chunks on web. Public Dart signatures unchanged (still `Future`-based)
 
 ### Platform Notes
 
-- On web the calls share the main thread cooperatively (yields ~every second of audio); for bulk scans prefer short clips or native. No extra setup needed — no worker pool involved
+- On web the calls share the main thread cooperatively (yields ~every second of audio); for bulk scans prefer short clips or native. No extra setup needed - no worker pool involved
 - `similarity` stays synchronous: it compares small in-memory vectors in microseconds, no token needed
 
 ## 0.1.4
 
 ### Bug Fixes
 
-- Fixed macOS/iOS Swift Package Manager resolution: the vended library product is now `haudiotagger-fingerprint` (hyphenated, as flutter_tool requires — underscores are illegal in the derived CFBundleIdentifier), while package and target names stay unchanged
+- Fixed macOS/iOS Swift Package Manager resolution: the vended library product is now `haudiotagger-fingerprint` (hyphenated, as flutter_tool requires - underscores are illegal in the derived CFBundleIdentifier), while package and target names stay unchanged
 
 ## 0.1.3
 
 ### Bug Fixes
 
-- Fixed web `DataCloneError` when used alongside `haudiotagger`: plain functions ran on FRB's worker pool, whose bootstrap hardcodes the `wasm_bindgen` JS global. All three API functions are now `#[frb(sync)]` — they execute on the calling thread with no pool, no workers, and no shared-memory hand-off. Public Dart API unchanged (still `Future`-based)
+- Fixed web `DataCloneError` when used alongside `haudiotagger`: plain functions ran on FRB's worker pool, whose bootstrap hardcodes the `wasm_bindgen` JS global. All three API functions are now `#[frb(sync)]` - they execute on the calling thread with no pool, no workers, and no shared-memory hand-off. Public Dart API unchanged (still `Future`-based)
 
 ## 0.1.2
 
@@ -77,7 +84,7 @@
 - New `HaudioFingerprint.similarity(a, b)` (plus `similarityTo`) returning a `0.0`–`1.0` content-match score
 - Chromaprint-compatible fingerprints (`preset_test2`, same algorithm as fpcalc/AcoustID)
 - Pure-Rust stack (Symphonia + rusty-chromaprint): no C dependencies, builds on all platforms including WASM
-- Federated backend: `FingerprintBackendImpl` plus `HaudioFingerprintBackend.registerWith`, self-registering via `dartPluginClass` — installing this package wires `Haudiotagger.fingerprint()` with no imports or init calls
+- Federated backend: `FingerprintBackendImpl` plus `HaudioFingerprintBackend.registerWith`, self-registering via `dartPluginClass` - installing this package wires `Haudiotagger.fingerprint()` with no imports or init calls
 
 ### Dependencies
 
